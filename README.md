@@ -1,5 +1,7 @@
-grprp
+GRPRP
 =====
+
+Golden Rose's Paper Re-pulp*er* Prototype
 
 Rust project for the _Arduino Uno_.
 
