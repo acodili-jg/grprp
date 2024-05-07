@@ -1,38 +1,68 @@
-/*!
- * A basic implementation of the `millis()` function from Arduino:
- *
- *     https://www.arduino.cc/reference/en/language/functions/time/millis/
- *
- * Uses timer TC0 and one of its interrupts to update a global millisecond
- * counter.  A walkthough of this code is available here:
- *
- *     https://blog.rahix.de/005-avr-hal-millis/
- */
+//! A basic implementation of the `millis()` function from Arduino:
+//!
+//! <https://www.arduino.cc/reference/en/language/functions/time/millis/>
+//!
+//! Uses timer TC0 and one of its interrupts to update a global millisecond
+//! counter. A walkthough of this code is available here:
+//!
+//! <https://blog.rahix.de/005-avr-hal-millis/>
+//!
+//! This implementation is a modification of:
+//!
+//! <https://github.com/Rahix/avr-hal/blob/96c9979/examples/arduino-uno/src/bin/uno-millis.rs>
+//!
+//! Interrupts *must* be enabled.
 
+use arduino_hal::simple_pwm::Prescaler;
 use core::cell;
 use panic_halt as _;
 
+/////////////////////
+// Public Functions
+/////////////////////
+
+/// Returns the number of milliseconds passed since the Arduino board began
+/// running the current program. This number will overflow (go back to zero),
+/// after approximately 50 days.
+#[must_use]
 pub fn millis() -> u32 {
     avr_device::interrupt::free(|cs| MILLIS_COUNTER.borrow(cs).get())
 }
 
-pub fn millis_init(tc0: arduino_hal::pac::TC0) {
+/// Initialization for [`millis`] to behavior correctly.
+pub fn init(tc0: &arduino_hal::pac::TC0) {
     // Configure the timer for the above interval (in CTC mode)
     // and enable its interrupt.
     tc0.tccr0a.write(|w| w.wgm0().ctc());
-    tc0.ocr0a.write(|w| w.bits(TIMER_COUNTS as u8));
+    tc0.ocr0a.write(|w| w.bits(TIMER_COUNTS));
     tc0.tccr0b.write(|w| match PRESCALER {
-        8 => w.cs0().prescale_8(),
-        64 => w.cs0().prescale_64(),
-        256 => w.cs0().prescale_256(),
-        1024 => w.cs0().prescale_1024(),
-        _ => panic!(),
+        Prescaler::Direct => w.cs0().direct(),
+        Prescaler::Prescale8 => w.cs0().prescale_8(),
+        Prescaler::Prescale64 => w.cs0().prescale_64(),
+        Prescaler::Prescale256 => w.cs0().prescale_256(),
+        Prescaler::Prescale1024 => w.cs0().prescale_1024(),
     });
     tc0.timsk0.write(|w| w.ocie0a().set_bit());
 
     // Reset the global millisecond counter
     avr_device::interrupt::free(|cs| {
         MILLIS_COUNTER.borrow(cs).set(0);
+    });
+}
+
+///////////////
+// Interrupts
+///////////////
+
+static MILLIS_COUNTER: avr_device::interrupt::Mutex<cell::Cell<u32>> =
+    avr_device::interrupt::Mutex::new(cell::Cell::new(0));
+
+#[avr_device::interrupt(atmega328p)]
+fn TIMER0_COMPA() {
+    avr_device::interrupt::free(|cs| {
+        let counter_cell = MILLIS_COUNTER.borrow(cs);
+        let counter = counter_cell.get();
+        counter_cell.set(counter + MILLIS_INCREMENT);
     });
 }
 
@@ -47,19 +77,18 @@ pub fn millis_init(tc0: arduino_hal::pac::TC0) {
 // ║      1024 ║          125 ║              8 ms ║
 // ║      1024 ║          250 ║             16 ms ║
 // ╚═══════════╩══════════════╩═══════════════════╝
-const PRESCALER: u32 = 1024;
-const TIMER_COUNTS: u32 = 125;
+const PRESCALER: Prescaler = Prescaler::Prescale1024;
+const TIMER_COUNTS: u8 = 125;
 
-const MILLIS_INCREMENT: u32 = PRESCALER * TIMER_COUNTS / 16000;
+const MILLIS_INCREMENT: u32 = divisions(PRESCALER) * TIMER_COUNTS as u32 / 16000;
 
-static MILLIS_COUNTER: avr_device::interrupt::Mutex<cell::Cell<u32>> =
-    avr_device::interrupt::Mutex::new(cell::Cell::new(0));
-
-#[avr_device::interrupt(atmega328p)]
-fn TIMER0_COMPA() {
-    avr_device::interrupt::free(|cs| {
-        let counter_cell = MILLIS_COUNTER.borrow(cs);
-        let counter = counter_cell.get();
-        counter_cell.set(counter + MILLIS_INCREMENT);
-    })
+#[inline]
+const fn divisions(prescaler: Prescaler) -> u32 {
+    match prescaler {
+        Prescaler::Direct => 0,
+        Prescaler::Prescale8 => 8,
+        Prescaler::Prescale64 => 64,
+        Prescaler::Prescale256 => 256,
+        Prescaler::Prescale1024 => 1024,
+    }
 }
