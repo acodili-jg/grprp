@@ -2,34 +2,31 @@
 #![no_main]
 #![feature(abi_avr_interrupt)]
 
-use grprp::{
-    duration,
-    millis::{millis, millis_init},
-    state::State,
-};
+use grprp::{duration, millis, state::State};
 use panic_halt as _;
 
 #[arduino_hal::entry]
 fn main() -> ! {
+    #[allow(clippy::unwrap_used)]
     let dp = arduino_hal::Peripherals::take().unwrap();
     let pins = arduino_hal::pins!(dp);
 
-    millis_init(dp.TC0);
+    millis::init(&dp.TC0);
 
     // Enable interrupts globally (needed by `millis`)
     unsafe { avr_device::interrupt::enable() };
 
-    let mut lower_drain_pump = pins.d0.into_output();
-    let mut blender = pins.d1.into_output();
+    let lower_drain_pump = pins.d0.into_output();
+    let blender = pins.d1.into_output();
     let mut separator_hatch_direction = pins.d2.into_output();
     let mut separator_hatch_enable = pins.d3.into_output();
-    let mut upper_drain_pump = pins.d4.into_output();
-    let mut heater = pins.d5.into_output();
+    let upper_drain_pump = pins.d4.into_output();
+    let heater = pins.d5.into_output();
     let start = pins.d6;
     let stop = pins.d7;
-    let mut ready = pins.d8.into_output();
+    let ready = pins.d8.into_output();
     let mut input_hatch_lock = pins.d9.into_output();
-    let mut mixer = pins.d10.into_output();
+    let mixer = pins.d10.into_output();
     let mut water_pump = pins.d11.into_output();
 
     let mut state = State::InitialIdling;
