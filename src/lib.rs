@@ -4,3 +4,5 @@
 pub mod duration;
 pub mod millis;
 pub mod state;
+
+pub use millis::millis;
