@@ -6,7 +6,9 @@ macro_rules! constants {
 
 constants! {
     DEFAULT = 1000;
-    LOCKING = DEFAULT;
+    DEFAULT_SHORT = 250;
+
+    LOCKING = DEFAULT_SHORT;
     SOAK_WATER_PUMPING = DEFAULT;
     SEPARATOR_TRANSITION = DEFAULT;
 }
