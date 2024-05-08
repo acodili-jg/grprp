@@ -16,17 +16,17 @@ fn main() -> ! {
     // Enable interrupts globally (needed by `millis`)
     unsafe { avr_device::interrupt::enable() };
 
-    let lower_drain_pump = pins.d0.into_output();
-    let blender = pins.d1.into_output();
+    let _lower_drain_pump = pins.d0.into_output();
+    let _blender = pins.d1.into_output();
     let mut separator_hatch_direction = pins.d2.into_output();
     let mut separator_hatch_enable = pins.d3.into_output();
-    let upper_drain_pump = pins.d4.into_output();
-    let heater = pins.d5.into_output();
+    let _upper_drain_pump = pins.d4.into_output();
+    let _heater = pins.d5.into_output();
     let start = pins.d6;
     let stop = pins.d7;
-    let ready = pins.d8.into_output();
+    let _ready = pins.d8.into_output();
     let mut input_hatch_lock = pins.d9.into_output();
-    let mixer = pins.d10.into_output();
+    let _mixer = pins.d10.into_output();
     let mut water_pump = pins.d11.into_output();
 
     let mut state = State::InitialIdling;
@@ -35,6 +35,7 @@ fn main() -> ! {
     loop {
         let curr_ms = millis();
         let delta_ms = curr_ms.wrapping_sub(last_ms);
+        let _stop = stop.is_high();
 
         match state {
             State::InitialIdling if start.is_high() => {
