@@ -13,7 +13,7 @@ fn main() -> ! {
 
     millis::init(&dp.TC0);
 
-    // Enable interrupts globally (needed by `millis`)
+    // Enable interrupts (needed by `millis`)
     unsafe { avr_device::interrupt::enable() };
 
     let _lower_drain_pump = pins.d0.into_output();
