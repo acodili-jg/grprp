@@ -2,7 +2,7 @@
 #![no_main]
 #![feature(abi_avr_interrupt)]
 
-use grprp::{millis, pin_mode, sketch, state::State};
+use grprp::{millis, pin_mode, sketch};
 use panic_halt as _;
 
 #[arduino_hal::entry]
@@ -15,7 +15,7 @@ fn main() -> ! {
     // Enable interrupts (needed by `millis`)
     unsafe { avr_device::interrupt::enable() };
 
-    let mut sketch = sketch!(pins);
+    let _sketch = sketch!(pins);
     let mut led = pins.d13.into_output();
 
     let mut last_ms = millis();
@@ -25,6 +25,6 @@ fn main() -> ! {
             led.toggle();
             last_ms = millis();
         }
-        sketch.invoke();
+        //sketch.invoke();
     }
 }
