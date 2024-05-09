@@ -24,7 +24,7 @@ fn main() -> ! {
         if curr_ms.wrapping_sub(last_ms) >= 1_000 {
             led.toggle();
             last_ms = millis();
-        } //
+        }
         sketch.invoke();
     }
 }
