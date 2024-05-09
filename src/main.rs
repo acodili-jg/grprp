@@ -15,7 +15,7 @@ fn main() -> ! {
     // Enable interrupts (needed by `millis`)
     unsafe { avr_device::interrupt::enable() };
 
-    let _sketch = sketch!(pins);
+    let mut sketch = sketch!(pins);
     let mut led = pins.d13.into_output();
 
     let mut last_ms = millis();
@@ -24,7 +24,7 @@ fn main() -> ! {
         if curr_ms.wrapping_sub(last_ms) >= 1_000 {
             led.toggle();
             last_ms = millis();
-        }
-        //sketch.invoke();
+        } //
+        sketch.invoke();
     }
 }
