@@ -1,0 +1,33 @@
+name: build-commit
+
+on: [ push ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+    - name: Clippy
+      run: |
+        cargo
+        clippy
+        --lib
+        --bins
+        --verbose
+        --
+        -Wclippy::pedantic
+        -Wclippy::nursery
+        -Wclippy::expect_used
+        -Wclippy::unwrap_used
+    - name: Build
+      run: cargo build --release --verbose
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: grprp-artifacts
+        path: target\avr-atmega328p\release\grprp.elf
