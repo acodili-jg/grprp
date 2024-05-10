@@ -111,6 +111,11 @@ impl Sketch {
                 self.separator_hatch_enable.set_low();
                 self.water_pump.set_high();
             }
+            State::SoakWaterPumping if delta_ms >= duration::SOAK_WATER_PUMPING => {
+                transition_to!(SoakWaterHeating);
+                self.water_pump.set_low();
+                self.heater.set_high();
+            }
             _ => { /* TODO */ }
         }
     }
