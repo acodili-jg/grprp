@@ -99,7 +99,7 @@ impl Sketch {
                 self.separator_hatch_direction.set_high();
                 self.separator_hatch_enable.set_high();
             }
-            State::InitialSetupSeparatorOpening if delta_ms >= duration::SEPARATOR_TRANSITION => {
+            State::InitialSetupSeparatorClosing if delta_ms >= duration::SEPARATOR_TRANSITION => {
                 self.state = State::SoakWaterPumping;
                 self.last_ms = curr_ms;
                 self.separator_hatch_enable.set_low();
