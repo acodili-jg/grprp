@@ -14,20 +14,20 @@ jobs:
       uses: actions/checkout@v4
     - name: Clippy
       run: |
-        rustup
-        component
-        add
-        clippy
-        &&
-        cargo
-        clippy
-        --lib
-        --bins
-        --verbose
-        --
-        -Wclippy::pedantic
-        -Wclippy::nursery
-        -Wclippy::expect_used
+        rustup                \
+        component             \
+        add                   \
+        clippy                \
+        &&                    \
+        cargo                 \
+        clippy                \
+        --lib                 \
+        --bins                \
+        --verbose             \
+        --                    \
+        -Wclippy::pedantic    \
+        -Wclippy::nursery     \
+        -Wclippy::expect_used \
         -Wclippy::unwrap_used
     - name: Build
       run: cargo build --release --verbose
