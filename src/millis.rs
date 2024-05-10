@@ -54,6 +54,7 @@ pub fn init(tc0: &arduino_hal::pac::TC0) {
 // Custom Types
 /////////////////
 
+/// Measure of time in milliseconds `ms`.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, ufmt::derive::uDebug)]
 pub struct Millis(pub u32);
 
