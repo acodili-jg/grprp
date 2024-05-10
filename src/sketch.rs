@@ -1,5 +1,5 @@
 use arduino_hal::{
-    hal::port::{PB0, PB1, PB2, PB3, PB4, PD0, PD1, PD2, PD3, PD4, PD5, PD7},
+    hal::port::{PB0, PB1, PB2, PB3, PD0, PD1, PD2, PD3, PD4, PD5, PD6, PD7},
     port::mode::{Input, Output, PullUp},
 };
 
@@ -11,7 +11,7 @@ use crate::{
 
 macro_rules! decl_sketch {
     {
-        $($pin_field:ident : pin!( $mode:ty, $pin:ident : $pin_t:ty )),* $(,)?
+        $($pin_field:ident : pin!( $mode:ty, $pin:ident : $pin_t:ty ) $({ $init:stmt })?),* $(,)?
         @
         $($field:ident : $field_t:ty = $default:expr),* $(,)?
     } => {
@@ -22,11 +22,12 @@ macro_rules! decl_sketch {
         }
 
         impl Sketch {
-            #[allow(clippy::too_many_arguments)]
+            #[allow(unused_mut, clippy::too_many_arguments)]
             #[must_use]
             pub fn new(
-                $($pin_field : ::arduino_hal::port::Pin<$mode, $pin_t>,)*
+                $(mut $pin_field : ::arduino_hal::port::Pin<$mode, $pin_t>,)*
             ) -> Self {
+                $($($init)?)*
                 Sketch {
                     $($pin_field,)*
                     $($field : $default,)*
@@ -46,18 +47,18 @@ macro_rules! decl_sketch {
 }
 
 decl_sketch! {
-    lower_drain_pump: pin!(Output, d0: PD0),
-    blender: pin!(Output, d1: PD1),
-    separator_hatch_direction: pin!(Output, d2: PD2),
-    separator_hatch_enable: pin!(Output, d3: PD3),
-    upper_drain_pump: pin!(Output, d4: PD4),
-    heater: pin!(Output, d5: PD5),
+    blender: pin!(Output, d0: PD0),
+    heater: pin!(Output, d1: PD1),
+    mixer: pin!(Output, d2: PD2),
+    input_hatch_lock: pin!(Output, d3: PD3),
+    lower_drain_pump: pin!(Output, d4: PD4),
+    separator_hatch_direction: pin!(Output, d5: PD5),
+    separator_hatch_enable: pin!(Output, d6: PD6),
     start: pin!(Input<PullUp>, d7: PD7),
     stop: pin!(Input<PullUp>, d8: PB0),
-    ready: pin!(Output, d9: PB1),
-    input_hatch_lock: pin!(Output, d10: PB2),
-    mixer: pin!(Output, d11: PB3),
-    water_pump: pin!(Output, d12: PB4),
+    ready: pin!(Output, d9: PB1) { ready.set_high() },
+    upper_drain_pump: pin!(Output, d10: PB2),
+    water_pump: pin!(Output, d11: PB3),
     @
     state: State = State::InitialIdling,
     last_ms: Millis = millis(),
@@ -88,6 +89,7 @@ impl Sketch {
             }
             State::InitialLocking if delta_ms >= duration::LOCKING && self.start.is_low() => {
                 transition_to!(InitialSetupSeparatorOpening);
+                self.ready.set_low();
                 self.separator_hatch_direction.set_low();
                 self.separator_hatch_enable.set_high();
             }
