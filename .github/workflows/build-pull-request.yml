@@ -1,0 +1,28 @@
+name: build-pull-request
+
+on: [ pull_request ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+    - name: Clippy
+      run: |
+        cargo
+        clippy
+        --lib
+        --bins
+        --verbose
+        --
+        -Wclippy::pedantic
+        -Wclippy::nursery
+        -Wclippy::expect_used
+        -Wclippy::unwrap_used
+    - name: Build
+      run: cargo build --release --verbose
