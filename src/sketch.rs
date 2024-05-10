@@ -60,6 +60,11 @@ decl_sketch! {
 }
 
 impl Sketch {
+    #[must_use]
+    pub const fn state(&self) -> State {
+        self.state
+    }
+
     pub fn invoke(&mut self) {
         let curr_ms = millis();
         let delta_ms = curr_ms.wrapping_sub(self.last_ms);
@@ -68,6 +73,7 @@ impl Sketch {
         match self.state {
             State::InitialIdling if self.start.is_high() => {
                 self.state = State::InitialLocking;
+                self.last_ms = millis();
                 self.input_hatch_lock.set_high();
             }
             State::InitialLocking if delta_ms >= duration::LOCKING && self.start.is_high() => {
