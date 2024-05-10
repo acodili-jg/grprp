@@ -3,7 +3,11 @@ use arduino_hal::{
     port::mode::{Floating, Input, Output},
 };
 
-use crate::{duration, millis, state::State};
+use crate::{
+    duration,
+    millis::{millis, Millis},
+    state::State,
+};
 
 macro_rules! decl_sketch {
     {
@@ -56,7 +60,7 @@ decl_sketch! {
     water_pump: pin!(Output, d12: PB4),
     @
     state: State = State::InitialIdling,
-    last_ms: u32 = millis(),
+    last_ms: Millis = millis(),
 }
 
 impl Sketch {
@@ -70,38 +74,40 @@ impl Sketch {
         let delta_ms = curr_ms.wrapping_sub(self.last_ms);
         let _stop = self.stop.is_high();
 
+        macro_rules! transition_to {
+            ($state:ident) => {
+                self.state = $crate::state::State::$state;
+                self.last_ms = curr_ms;
+            };
+        }
+
         match self.state {
             State::InitialIdling if self.start.is_high() => {
-                self.state = State::InitialLocking;
-                self.last_ms = millis();
+                transition_to!(InitialLocking);
                 self.input_hatch_lock.set_high();
             }
             State::InitialLocking if delta_ms >= duration::LOCKING && self.start.is_high() => {
-                self.state = State::InitialSetupSeparatorOpening;
-                self.last_ms = curr_ms;
+                transition_to!(InitialSetupSeparatorOpening);
                 self.separator_hatch_direction.set_low();
                 self.separator_hatch_enable.set_high();
             }
             State::InitialLocking if self.start.is_low() => {
-                self.state = State::InitialIdling;
+                transition_to!(InitialIdling);
                 self.input_hatch_lock.set_low();
             }
             State::InitialSetupSeparatorOpening if delta_ms >= duration::SEPARATOR_TRANSITION => {
-                self.state = State::InitialSetupWaterPumping;
-                self.last_ms = curr_ms;
+                transition_to!(InitialSetupWaterPumping);
                 self.separator_hatch_enable.set_low();
                 self.water_pump.set_high();
             }
             State::InitialSetupWaterPumping if delta_ms >= duration::SOAK_WATER_PUMPING => {
-                self.state = State::InitialSetupSeparatorClosing;
-                self.last_ms = curr_ms;
+                transition_to!(InitialSetupSeparatorClosing);
                 self.water_pump.set_low();
                 self.separator_hatch_direction.set_high();
                 self.separator_hatch_enable.set_high();
             }
             State::InitialSetupSeparatorClosing if delta_ms >= duration::SEPARATOR_TRANSITION => {
-                self.state = State::SoakWaterPumping;
-                self.last_ms = curr_ms;
+                transition_to!(SoakWaterPumping);
                 self.separator_hatch_enable.set_low();
                 self.water_pump.set_high();
             }

@@ -25,8 +25,8 @@ use panic_halt as _;
 /// running the current program. This number will overflow (go back to zero),
 /// after approximately 50 days.
 #[must_use]
-pub fn millis() -> u32 {
-    avr_device::interrupt::free(|cs| MILLIS_COUNTER.borrow(cs).get())
+pub fn millis() -> Millis {
+    avr_device::interrupt::free(|cs| MILLIS_COUNTER.borrow(cs).get()).into()
 }
 
 /// Initialization for [`millis`] to behavior correctly.
@@ -49,6 +49,13 @@ pub fn init(tc0: &arduino_hal::pac::TC0) {
         MILLIS_COUNTER.borrow(cs).set(0);
     });
 }
+
+/////////////////
+// Custom Types
+/////////////////
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, ufmt::derive::uDebug)]
+pub struct Millis(pub u32);
 
 ///////////////
 // Interrupts
@@ -91,4 +98,72 @@ const fn divisions(prescaler: Prescaler) -> u32 {
         Prescaler::Prescale256 => 256,
         Prescaler::Prescale1024 => 1024,
     }
+}
+
+////////////////////////////////
+// Custom Type Implementations
+////////////////////////////////
+
+impl From<Millis> for u32 {
+    #[inline]
+    fn from(Millis(millis): Millis) -> Self {
+        millis
+    }
+}
+
+impl From<u32> for Millis {
+    #[inline]
+    fn from(millis: u32) -> Self {
+        Self(millis)
+    }
+}
+
+macro_rules! millis_biops {
+    ($vis:vis const $name:ident -> $ret_t:ty { bind $tmp:ident; $expr:expr }) => {
+        #[inline]
+        #[must_use] $vis const fn $name(self, rhs: Self) -> $ret_t {
+            let $tmp = self.0.$name(rhs.0);
+            $expr
+        }
+    };
+
+    ($vis:vis $name:ident -> $ret_t:ty { bind $tmp:ident; $expr:expr }) => {
+        #[inline]
+        $vis fn $name(self, rhs: Self) -> $ret_t {
+            let $tmp = self.0.$name(rhs.0);
+            $expr
+        }
+    };
+}
+
+macro_rules! millis_biops_group {
+    ($vis:vis const $($name:ident),+ $(,)? -> $ret_t:ty { bind $tmp:ident; $expr:expr }) => {
+        $(millis_biops!($vis const $name -> $ret_t { bind $tmp; $expr });)+
+    };
+
+    ($vis:vis $($name:ident),+ $(,)? -> $ret_t:ty { bind $tmp:ident; $expr:expr }) => {
+        $(millis_biops!($vis $name -> $ret_t { bind $tmp; $expr });)+
+    };
+}
+
+impl Millis {
+    pub const ONE_SECOND: Self = Self(1000);
+
+    millis_biops_group!(
+        pub const
+            wrapping_add,
+            wrapping_div,
+            wrapping_div_euclid,
+            wrapping_mul,
+            wrapping_pow,
+            wrapping_rem,
+            wrapping_rem_euclid,
+            wrapping_shl,
+            wrapping_shr,
+            wrapping_sub,
+        -> Self {
+            bind tmp;
+            Self(tmp)
+        }
+    );
 }
