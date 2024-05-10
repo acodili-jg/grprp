@@ -25,6 +25,7 @@
       "top": -176.4,
       "left": 522.2,
       "attrs": {
+        "label": "bdr",
         "color": "red"
       }
     },
@@ -34,7 +35,8 @@
       "top": -176.4,
       "left": 503,
       "attrs": {
-        "color": "red"
+        "label": "htr",
+        "color": "orange"
       }
     },
     {
@@ -43,7 +45,8 @@
       "top": -176.4,
       "left": 483.8,
       "attrs": {
-        "color": "red"
+        "label": "mxr",
+        "color": "white"
       }
     },
     {
@@ -52,7 +55,8 @@
       "top": -176.4,
       "left": 445.4,
       "attrs": {
-        "color": "red"
+        "label": "ldp",
+        "color": "gray"
       }
     },
     {
@@ -61,7 +65,8 @@
       "top": -176.4,
       "left": 426.2,
       "attrs": {
-        "color": "red"
+        "label": "shd",
+        "color": "yellow"
       }
     },
     {
@@ -70,7 +75,8 @@
       "top": -176.4,
       "left": 407,
       "attrs": {
-        "color": "red"
+        "label": "she",
+        "color": "yellow"
       }
     },
     {
@@ -79,7 +85,8 @@
       "top": -176.4,
       "left": 330.2,
       "attrs": {
-        "color": "red"
+        "label": "rdy",
+        "color": "green"
       }
     },
     {
@@ -88,7 +95,8 @@
       "top": -176.4,
       "left": 311,
       "attrs": {
-        "color": "red"
+        "label": "udp",
+        "color": "gray"
       }
     },
     {
@@ -97,7 +105,8 @@
       "top": -176.4,
       "left": 291.8,
       "attrs": {
-        "color": "red"
+        "label": "wtr",
+        "color": "blue"
       }
     },
     {
@@ -106,7 +115,7 @@
       "top": -176.4,
       "left": 272.6,
       "attrs": {
-        "color": "red"
+        "color": "black"
       }
     },
     {
@@ -115,7 +124,8 @@
       "top": -176.4,
       "left": 253.4,
       "attrs": {
-        "color": "red"
+        "label": "test",
+        "color": "black"
       }
     },
     {
@@ -256,7 +266,8 @@
       "top": -176.4,
       "left": 464.6,
       "attrs": {
-        "color": "red"
+        "label": "ihl",
+        "color": "purple"
       }
     },
     {
