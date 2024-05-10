@@ -30,7 +30,21 @@ jobs:
         -Wclippy::expect_used \
         -Wclippy::unwrap_used
     - name: Build
-      run: cargo build --release --verbose
+      run: |
+        sudo            \
+        apt             \
+        install         \
+        avr-libc        \
+        gcc-avr         \
+        pkg-config      \
+        avrdude         \
+        libudev-dev     \
+        build-essential \
+        &&              \
+        cargo           \
+        build           \
+        --release       \
+        --verbose
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
