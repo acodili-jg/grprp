@@ -1,6 +1,6 @@
 use arduino_hal::{
     hal::port::{PB0, PB1, PB2, PB3, PB4, PD0, PD1, PD2, PD3, PD4, PD5, PD7},
-    port::mode::{Floating, Input, Output},
+    port::mode::{Input, Output, PullUp},
 };
 
 use crate::{
@@ -52,8 +52,8 @@ decl_sketch! {
     separator_hatch_enable: pin!(Output, d3: PD3),
     upper_drain_pump: pin!(Output, d4: PD4),
     heater: pin!(Output, d5: PD5),
-    start: pin!(Input<Floating>, d7: PD7),
-    stop: pin!(Input<Floating>, d8: PB0),
+    start: pin!(Input<PullUp>, d7: PD7),
+    stop: pin!(Input<PullUp>, d8: PB0),
     ready: pin!(Output, d9: PB1),
     input_hatch_lock: pin!(Output, d10: PB2),
     mixer: pin!(Output, d11: PB3),
@@ -72,7 +72,7 @@ impl Sketch {
     pub fn invoke(&mut self) {
         let curr_ms = millis();
         let delta_ms = curr_ms.wrapping_sub(self.last_ms);
-        let _stop = self.stop.is_high();
+        let _stop = self.stop.is_low();
 
         macro_rules! transition_to {
             ($state:ident) => {
@@ -82,16 +82,16 @@ impl Sketch {
         }
 
         match self.state {
-            State::InitialIdling if self.start.is_high() => {
+            State::InitialIdling if self.start.is_low() => {
                 transition_to!(InitialLocking);
                 self.input_hatch_lock.set_high();
             }
-            State::InitialLocking if delta_ms >= duration::LOCKING && self.start.is_high() => {
+            State::InitialLocking if delta_ms >= duration::LOCKING && self.start.is_low() => {
                 transition_to!(InitialSetupSeparatorOpening);
                 self.separator_hatch_direction.set_low();
                 self.separator_hatch_enable.set_high();
             }
-            State::InitialLocking if self.start.is_low() => {
+            State::InitialLocking if self.start.is_high() => {
                 transition_to!(InitialIdling);
                 self.input_hatch_lock.set_low();
             }
