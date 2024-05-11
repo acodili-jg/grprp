@@ -73,7 +73,7 @@ impl Sketch {
     pub fn invoke(&mut self) {
         let curr_ms = millis();
         let delta_ms = curr_ms.wrapping_sub(self.last_ms);
-        let _stop = self.stop.is_low();
+        let stop = self.stop.is_low();
 
         macro_rules! transition_to {
             ($state:ident) => {
@@ -132,11 +132,27 @@ impl Sketch {
                 self.water_pump.set_high();
             }
 
+            State::SoakWaterPumping if stop => {
+                transition_to!(SoakWaterDraining);
+                self.upper_drain_pump.set_high();
+                self.water_pump.set_low();
+            }
             State::SoakWaterPumping if delta_ms < duration::SOAK_WATER_PUMPING => {}
             State::SoakWaterPumping => {
                 transition_to!(SoakWaterHeating);
                 self.water_pump.set_low();
                 self.heater.set_high();
+            }
+
+            State::SoakWaterHeating if stop => {
+                transition_to!(SoakWaterDraining);
+                self.heater.set_low();
+                self.upper_drain_pump.set_high();
+            }
+            State::SoakWaterHeating if delta_ms < duration::HEATING => {}
+            State::SoakWaterHeating => {
+                transition_to!(SoakWaterHeatedMixing);
+                self.mixer.set_high();
             }
 
             _ => { /* TODO */ }
