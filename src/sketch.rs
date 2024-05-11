@@ -62,6 +62,7 @@ decl_sketch! {
     @
     state: State = State::default(),
     last_ms: Millis = millis(),
+    stopping: bool = false,
 }
 
 impl Sketch {
@@ -70,10 +71,12 @@ impl Sketch {
         self.state
     }
 
+    #[allow(clippy::too_many_lines)] // TODO - address
     pub fn invoke(&mut self) {
         let curr_ms = millis();
         let delta_ms = curr_ms.wrapping_sub(self.last_ms);
-        let stop = self.stop.is_low();
+        let stopping = self.stopping | self.stop.is_low();
+        self.stopping = stopping;
 
         macro_rules! transition_to {
             ($state:ident) => {
@@ -105,6 +108,7 @@ impl Sketch {
             State::InitialLocking if delta_ms < duration::LOCKING => {}
             State::InitialLocking => {
                 transition_to!(InitialSetupSeparatorOpening);
+                self.stopping = false;
                 self.ready.set_low();
                 self.separator_hatch_direction.set_low();
                 self.separator_hatch_enable.set_high();
@@ -132,7 +136,7 @@ impl Sketch {
                 self.water_pump.set_high();
             }
 
-            State::SoakWaterPumping if stop => {
+            State::SoakWaterPumping if stopping => {
                 transition_to!(SoakWaterDraining);
                 self.upper_drain_pump.set_high();
                 self.water_pump.set_low();
@@ -144,7 +148,7 @@ impl Sketch {
                 self.heater.set_high();
             }
 
-            State::SoakWaterHeating if stop => {
+            State::SoakWaterHeating if stopping => {
                 transition_to!(SoakWaterDraining);
                 self.heater.set_low();
                 self.upper_drain_pump.set_high();
@@ -155,7 +159,7 @@ impl Sketch {
                 self.mixer.set_high();
             }
 
-            State::SoakWaterHeatedMixing if stop => {
+            State::SoakWaterHeatedMixing if stopping => {
                 transition_to!(SoakWaterDraining);
                 self.heater.set_low();
                 self.mixer.set_low();
@@ -167,11 +171,23 @@ impl Sketch {
                 self.heater.set_low();
             }
 
-            State::SoakWaterMixing if delta_ms < duration::MIXING && !stop => {}
+            State::SoakWaterMixing if delta_ms < duration::MIXING && !stopping => {}
             State::SoakWaterMixing => {
                 transition_to!(SoakWaterDraining);
                 self.mixer.set_low();
                 self.upper_drain_pump.set_high();
+            }
+
+            State::SoakWaterDraining if delta_ms < duration::DRAINING => {}
+            State::SoakWaterDraining if stopping => {
+                transition_to!(Idling);
+                self.upper_drain_pump.set_low();
+                self.ready.set_high();
+            }
+            State::SoakWaterDraining => {
+                transition_to!(RinseWaterPumping);
+                self.upper_drain_pump.set_low();
+                self.water_pump.set_high();
             }
 
             _ => { /* TODO */ }
