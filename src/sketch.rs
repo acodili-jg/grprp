@@ -155,6 +155,18 @@ impl Sketch {
                 self.mixer.set_high();
             }
 
+            State::SoakWaterHeatedMixing if stop => {
+                transition_to!(SoakWaterDraining);
+                self.heater.set_low();
+                self.mixer.set_low();
+                self.upper_drain_pump.set_high();
+            }
+            State::SoakWaterHeatedMixing if delta_ms < duration::HEATED_MIXING => {}
+            State::SoakWaterHeatedMixing => {
+                transition_to!(SoakWaterMixing);
+                self.heater.set_low();
+            }
+
             _ => { /* TODO */ }
         }
     }
