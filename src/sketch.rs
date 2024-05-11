@@ -186,8 +186,13 @@ impl Sketch {
             }
             State::SoakWaterDraining => {
                 transition_to!(RinseWaterPumping);
-                self.upper_drain_pump.set_low();
                 self.water_pump.set_high();
+            }
+
+            State::RinseWaterPumping if delta_ms < duration::RINSING => {}
+            State::RinseWaterPumping => {
+                transition_to!(RinseWaterDraining);
+                self.water_pump.set_low();
             }
 
             _ => { /* TODO */ }
