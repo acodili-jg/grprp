@@ -195,6 +195,19 @@ impl Sketch {
                 self.water_pump.set_low();
             }
 
+            State::RinseWaterDraining if delta_ms < duration::DRAINING => {}
+            State::RinseWaterDraining if stopping => {
+                transition_to!(Idling);
+                self.upper_drain_pump.set_low();
+                self.ready.set_high();
+            }
+            State::RinseWaterDraining => {
+                transition_to!(SeparatorOpening);
+                self.upper_drain_pump.set_low();
+                self.separator_hatch_direction.set_low();
+                self.separator_hatch_enable.set_high();
+            }
+
             _ => { /* TODO */ }
         }
     }
