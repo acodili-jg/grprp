@@ -51,16 +51,16 @@ decl_sketch! {
     heater: pin!(Output, d1: PD1),
     mixer: pin!(Output, d2: PD2),
     input_hatch_lock: pin!(Output, d3: PD3),
-    lower_drain_pump: pin!(Output, d4: PD4),
+    lower_drain_pump: pin!(Output, d4: PD4) { lower_drain_pump.set_high() },
     separator_hatch_direction: pin!(Output, d5: PD5),
     separator_hatch_enable: pin!(Output, d6: PD6),
     start: pin!(Input<PullUp>, d7: PD7),
     stop: pin!(Input<PullUp>, d8: PB0),
-    ready: pin!(Output, d9: PB1) { ready.set_high() },
-    upper_drain_pump: pin!(Output, d10: PB2),
+    ready: pin!(Output, d9: PB1),
+    upper_drain_pump: pin!(Output, d10: PB2) { upper_drain_pump.set_high() },
     water_pump: pin!(Output, d11: PB3),
     @
-    state: State = State::InitialIdling,
+    state: State = State::default(),
     last_ms: Millis = millis(),
 }
 
@@ -83,10 +83,19 @@ impl Sketch {
         }
 
         match self.state {
+            State::InitialDraining if delta_ms < duration::DRAINING => {}
+            State::InitialDraining => {
+                transition_to!(InitialIdling);
+                self.lower_drain_pump.set_low();
+                self.ready.set_high();
+                self.upper_drain_pump.set_low();
+            }
+
             State::InitialIdling if self.start.is_low() => {
                 transition_to!(InitialLocking);
                 self.input_hatch_lock.set_high();
             }
+
             State::InitialLocking if delta_ms >= duration::LOCKING && self.start.is_low() => {
                 transition_to!(InitialSetupSeparatorOpening);
                 self.ready.set_low();
@@ -97,27 +106,32 @@ impl Sketch {
                 transition_to!(InitialIdling);
                 self.input_hatch_lock.set_low();
             }
+
             State::InitialSetupSeparatorOpening if delta_ms >= duration::SEPARATOR_TRANSITION => {
                 transition_to!(InitialSetupWaterPumping);
                 self.separator_hatch_enable.set_low();
                 self.water_pump.set_high();
             }
+
             State::InitialSetupWaterPumping if delta_ms >= duration::SOAK_WATER_PUMPING => {
                 transition_to!(InitialSetupSeparatorClosing);
                 self.water_pump.set_low();
                 self.separator_hatch_direction.set_high();
                 self.separator_hatch_enable.set_high();
             }
+
             State::InitialSetupSeparatorClosing if delta_ms >= duration::SEPARATOR_TRANSITION => {
                 transition_to!(SoakWaterPumping);
                 self.separator_hatch_enable.set_low();
                 self.water_pump.set_high();
             }
+
             State::SoakWaterPumping if delta_ms >= duration::SOAK_WATER_PUMPING => {
                 transition_to!(SoakWaterHeating);
                 self.water_pump.set_low();
                 self.heater.set_high();
             }
+
             _ => { /* TODO */ }
         }
     }

@@ -1,5 +1,7 @@
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum State {
+    #[default]
+    InitialDraining,
     InitialIdling,
     InitialLocking,
     InitialSetupSeparatorOpening,
