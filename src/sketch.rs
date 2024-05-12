@@ -1,7 +1,4 @@
-use arduino_hal::{
-    hal::port::{PB0, PB1, PB2, PB3, PD0, PD1, PD2, PD3, PD4, PD5, PD6, PD7},
-    port::mode::{Input, Output, PullUp},
-};
+use arduino_hal::port::mode::{Input, Output, PullUp};
 
 use crate::{
     duration,
@@ -9,15 +6,78 @@ use crate::{
     state::State,
 };
 
+macro_rules! pin_type {
+    (a0) => {
+        ::arduino_hal::hal::port::PC0
+    };
+    (a1) => {
+        ::arduino_hal::hal::port::PC1
+    };
+    (a2) => {
+        ::arduino_hal::hal::port::PC2
+    };
+    (a3) => {
+        ::arduino_hal::hal::port::PC3
+    };
+    (a4) => {
+        ::arduino_hal::hal::port::PC4
+    };
+    (a5) => {
+        ::arduino_hal::hal::port::PC5
+    };
+    (d0) => {
+        ::arduino_hal::hal::port::PD0
+    };
+    (d1) => {
+        ::arduino_hal::hal::port::PD1
+    };
+    (d2) => {
+        ::arduino_hal::hal::port::PD2
+    };
+    (d3) => {
+        ::arduino_hal::hal::port::PD3
+    };
+    (d4) => {
+        ::arduino_hal::hal::port::PD4
+    };
+    (d5) => {
+        ::arduino_hal::hal::port::PD5
+    };
+    (d6) => {
+        ::arduino_hal::hal::port::PD6
+    };
+    (d7) => {
+        ::arduino_hal::hal::port::PD7
+    };
+    (d8) => {
+        ::arduino_hal::hal::port::PB0
+    };
+    (d9) => {
+        ::arduino_hal::hal::port::PB1
+    };
+    (d10) => {
+        ::arduino_hal::hal::port::PB2
+    };
+    (d11) => {
+        ::arduino_hal::hal::port::PB3
+    };
+    (d12) => {
+        ::arduino_hal::hal::port::PB4
+    };
+    (d13) => {
+        ::arduino_hal::hal::port::PB5
+    };
+}
+
 macro_rules! decl_sketch {
     {
-        $($pin_field:ident : pin!( $mode:ty, $pin:ident : $pin_t:ty ) $({ $init:stmt })?),* $(,)?
+        $($pin_field:ident : pin!( $mode:ty, $pin:ident ) $({ $init:stmt })?),* $(,)?
         @
         $($field:ident : $field_t:ty = $default:expr),* $(,)?
     } => {
         #[allow(dead_code, unused_variables)]
         pub struct Sketch {
-            $($pin_field : ::arduino_hal::port::Pin<$mode, $pin_t>,)*
+            $($pin_field : ::arduino_hal::port::Pin<$mode, pin_type!($pin)>,)*
             $($field : $field_t,)*
         }
 
@@ -25,7 +85,7 @@ macro_rules! decl_sketch {
             #[allow(unused_mut, clippy::too_many_arguments)]
             #[must_use]
             pub fn new(
-                $(mut $pin_field : ::arduino_hal::port::Pin<$mode, $pin_t>,)*
+                $(mut $pin_field : ::arduino_hal::port::Pin<$mode, pin_type!($pin)>,)*
             ) -> Self {
                 $($($init)?)*
                 Sketch {
@@ -47,18 +107,19 @@ macro_rules! decl_sketch {
 }
 
 decl_sketch! {
-    blender: pin!(Output, d0: PD0),
-    heater: pin!(Output, d1: PD1),
-    mixer: pin!(Output, d2: PD2),
-    input_hatch_lock: pin!(Output, d3: PD3),
-    lower_drain_pump: pin!(Output, d4: PD4) { lower_drain_pump.set_high() },
-    separator_hatch_direction: pin!(Output, d5: PD5),
-    separator_hatch_enable: pin!(Output, d6: PD6),
-    start: pin!(Input<PullUp>, d7: PD7),
-    stop: pin!(Input<PullUp>, d8: PB0),
-    ready: pin!(Output, d9: PB1),
-    upper_drain_pump: pin!(Output, d10: PB2) { upper_drain_pump.set_high() },
-    water_pump: pin!(Output, d11: PB3),
+    stop: pin!(Input<PullUp>, d0),
+    start: pin!(Input<PullUp>, d1),
+    ready: pin!(Output, d2),
+    blender: pin!(Output, d3),
+    heater: pin!(Output, d4),
+    mixer: pin!(Output, d5),
+    separator_hatch_enable: pin!(Output, d6),
+    separator_hatch_direction: pin!(Output, d7),
+    input_hatch_lock_direction: pin!(Output, d8),
+    input_hatch_lock_enable: pin!(Output, d9),
+    water_pump: pin!(Output, d10),
+    lower_drain_pump: pin!(Output, d11) { lower_drain_pump.set_high() },
+    upper_drain_pump: pin!(Output, d12) { upper_drain_pump.set_high() },
     @
     state: State = State::default(),
     last_ms: Millis = millis(),
@@ -98,20 +159,26 @@ impl Sketch {
             State::InitialIdling if self.start.is_high() => {}
             State::InitialIdling => {
                 transition_to!(InitialLocking);
-                self.input_hatch_lock.set_high();
+                self.input_hatch_lock_direction.set_low();
+                self.input_hatch_lock_enable.set_high();
             }
 
             State::InitialLocking if self.start.is_high() => {
-                transition_to!(InitialIdling);
-                self.input_hatch_lock.set_low();
+                transition_to!(InitialUnlocking);
+                self.input_hatch_lock_direction.set_high();
             }
             State::InitialLocking if delta_ms < duration::LOCKING => {}
             State::InitialLocking => {
                 transition_to!(InitialSetupSeparatorOpening);
-                self.stopping = false;
                 self.ready.set_low();
-                self.separator_hatch_direction.set_low();
+                self.input_hatch_lock_enable.set_low();
                 self.separator_hatch_enable.set_high();
+            }
+
+            State::InitialUnlocking if delta_ms < duration::LOCKING => {}
+            State::InitialUnlocking => {
+                transition_to!(InitialIdling);
+                self.input_hatch_lock_enable.set_low();
             }
 
             State::InitialSetupSeparatorOpening if delta_ms < duration::SEPARATOR_TRANSITION => {}

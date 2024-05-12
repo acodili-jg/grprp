@@ -4,6 +4,7 @@ pub enum State {
     InitialDraining,
     InitialIdling,
     InitialLocking,
+    InitialUnlocking,
     InitialSetupSeparatorOpening,
     InitialSetupWaterPumping,
     InitialSetupSeparatorClosing,

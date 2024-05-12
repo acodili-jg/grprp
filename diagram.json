@@ -23,7 +23,7 @@
       "type": "wokwi-pushbutton-6mm",
       "id": "start-btn",
       "top": 87.7,
-      "left": 170.1,
+      "left": 304.5,
       "rotate": 270,
       "attrs": {
         "color": "green",
@@ -34,7 +34,7 @@
       "type": "wokwi-pushbutton-6mm",
       "id": "stop-btn",
       "top": 87.7,
-      "left": 141.3,
+      "left": 275.7,
       "rotate": 270,
       "attrs": {
         "color": "red",
@@ -43,9 +43,19 @@
     },
     {
       "type": "wokwi-led",
+      "id": "ready-led",
+      "top": 44.4,
+      "left": 243.8,
+      "attrs": {
+        "label": "rdy",
+        "color": "green"
+      }
+    },
+    {
+      "type": "wokwi-led",
       "id": "blender-led",
       "top": 44.4,
-      "left": 301.4,
+      "left": 224.6,
       "attrs": {
         "label": "bdr",
         "color": "red"
@@ -55,7 +65,7 @@
       "type": "wokwi-led",
       "id": "heater-led",
       "top": 44.4,
-      "left": 282.2,
+      "left": 205.4,
       "attrs": {
         "label": "htr",
         "color": "orange"
@@ -65,7 +75,7 @@
       "type": "wokwi-led",
       "id": "mixer-led",
       "top": 44.4,
-      "left": 263,
+      "left": 186.2,
       "attrs": {
         "label": "mxr",
         "color": "white"
@@ -73,29 +83,9 @@
     },
     {
       "type": "wokwi-led",
-      "id": "lower-drain-pump-led",
-      "top": 44.4,
-      "left": 224.6,
-      "attrs": {
-        "label": "ldp",
-        "color": "gray"
-      }
-    },
-    {
-      "type": "wokwi-led",
-      "id": "separator-hatch-direction-led",
-      "top": 44.4,
-      "left": 205.4,
-      "attrs": {
-        "label": "shd",
-        "color": "yellow"
-      }
-    },
-    {
-      "type": "wokwi-led",
       "id": "separator-hatch-enable-led",
       "top": 44.4,
-      "left": 186.2,
+      "left": 167,
       "attrs": {
         "label": "she",
         "color": "yellow"
@@ -103,29 +93,39 @@
     },
     {
       "type": "wokwi-led",
-      "id": "ready-led",
+      "id": "separator-hatch-direction-led",
       "top": 44.4,
-      "left": 109.4,
+      "left": 147.8,
       "attrs": {
-        "label": "rdy",
-        "color": "green"
+        "label": "shd",
+        "color": "yellow"
       }
     },
     {
       "type": "wokwi-led",
-      "id": "upper-drain-pump-led",
+      "id": "input-hatch-lock-direction-led",
       "top": 44.4,
-      "left": 90.2,
+      "left": 128.6,
       "attrs": {
-        "label": "udp",
-        "color": "gray"
+        "label": "ild",
+        "color": "purple"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "input-hatch-lock-enable-led",
+      "top": 44.4,
+      "left": 109.4,
+      "attrs": {
+        "label": "ile",
+        "color": "purple"
       }
     },
     {
       "type": "wokwi-led",
       "id": "water-pump-led",
       "top": 44.4,
-      "left": 71,
+      "left": 90.2,
       "attrs": {
         "label": "wtr",
         "color": "blue"
@@ -133,11 +133,22 @@
     },
     {
       "type": "wokwi-led",
-      "id": "d12-led",
+      "id": "lower-drain-pump-led",
+      "top": 44.4,
+      "left": 71,
+      "attrs": {
+        "label": "ldp",
+        "color": "gray"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "upper-drain-pump-led",
       "top": 44.4,
       "left": 51.8,
       "attrs": {
-        "color": "brown"
+        "label": "udp",
+        "color": "gray"
       }
     },
     {
@@ -148,16 +159,6 @@
       "attrs": {
         "label": "test",
         "color": "brown"
-      }
-    },
-    {
-      "type": "wokwi-led",
-      "id": "led4",
-      "top": 44.4,
-      "left": 243.8,
-      "attrs": {
-        "label": "ihl",
-        "color": "purple"
       }
     }
   ],
@@ -172,119 +173,187 @@
       ]
     ],
     [
-      "bb1:tn.2",
+      "bb1:tn.3",
       "bb1:3t.a",
       "black",
       [
-        "v0"
+        "v-0.1",
+        "h-8"
       ]
     ],
     [
-      "bb1:tn.4",
+      "bb1:tn.5",
       "bb1:5t.a",
       "black",
       [
-        "v0"
+        "v-0.1",
+        "h-8"
       ]
     ],
     [
-      "bb1:7t.a",
       "bb1:tn.6",
+      "bb1:7t.a",
       "black",
       [
-        "v0"
+        "v-0.1",
+        "h-8"
       ]
     ],
     [
+      "bb1:tn.8",
       "bb1:9t.a",
-      "bb1:tn.7",
       "black",
       [
-        "v0"
+        "v-0.1",
+        "h-8"
       ]
     ],
     [
-      "bb1:25t.a",
+      "bb1:tn.10",
+      "bb1:11t.a",
+      "black",
+      [
+        "v-0.1",
+        "h-8"
+      ]
+    ],
+    [
+      "bb1:tn.11",
+      "bb1:13t.a",
+      "black",
+      [
+        "v-0.1",
+        "h-8"
+      ]
+    ],
+    [
+      "bb1:tn.13",
+      "bb1:15t.a",
+      "black",
+      [
+        "v-0.1",
+        "h-8"
+      ]
+    ],
+    [
+      "bb1:tn.15",
+      "bb1:17t.a",
+      "black",
+      [
+        "v-0.1",
+        "h-8"
+      ]
+    ],
+    [
+      "bb1:tn.16",
+      "bb1:19t.a",
+      "black",
+      [
+        "v-0.1",
+        "h-8"
+      ]
+    ],
+    [
+      "bb1:tn.18",
+      "bb1:21t.a",
+      "black",
+      [
+        "v-0.1",
+        "h-8"
+      ]
+    ],
+    [
+      "bb1:tn.20",
+      "bb1:23t.a",
+      "black",
+      [
+        "v-0.1",
+        "h-8"
+      ]
+    ],
+    [
       "bb1:tn.21",
+      "bb1:25t.a",
       "black",
       [
-        "v0"
+        "v-0.1",
+        "h-8"
       ]
     ],
     [
-      "bb1:27t.a",
-      "bb1:tn.22",
-      "black",
-      [
-        "v0"
-      ]
-    ],
-    [
-      "bb1:29t.a",
       "bb1:tn.24",
+      "bb1:28t.a",
       "black",
       [
-        "v0"
+        "v-0.1",
+        "h-8"
+      ]
+    ],
+    [
+      "uno:0",
+      "bb1:27b.j",
+      "red",
+      [
+        "v-28.8",
+        "h52.2"
       ]
     ],
     [
       "uno:1",
-      "bb1:28t.a",
-      "orange",
+      "bb1:30b.j",
+      "green",
       [
-        "v-19.2",
-        "h129",
-        "v-240",
-        "h-67.2"
+        "v-28.8",
+        "h71.5"
       ]
     ],
     [
       "uno:2",
-      "bb1:26t.a",
-      "white",
+      "bb1:24t.a",
+      "green",
       [
         "v-19.2",
         "h138.5",
-        "v-240",
-        "h-86.4"
-      ]
-    ],
-    [
-      "uno:3",
-      "bb1:24t.a",
-      "purple",
-      [
-        "v-19.2",
-        "h148",
         "v-240",
         "h-105.6"
       ]
     ],
     [
-      "uno:4",
+      "uno:3",
       "bb1:22t.a",
-      "gray",
+      "red",
       [
         "v-19.2",
-        "h157.5",
+        "h148",
         "v-240",
         "h-124.8"
       ]
     ],
     [
-      "uno:5",
+      "uno:4",
       "bb1:20t.a",
-      "gold",
+      "orange",
       [
         "v-19.2",
-        "h167",
+        "h157.5",
         "v-240",
         "h-144"
       ]
     ],
     [
-      "uno:6",
+      "uno:5",
       "bb1:18t.a",
+      "white",
+      [
+        "v-19.2",
+        "h167",
+        "v-240",
+        "h-163.2"
+      ]
+    ],
+    [
+      "uno:6",
+      "bb1:16t.a",
       "gold",
       [
         "v-19.2",
@@ -295,25 +364,30 @@
     ],
     [
       "uno:7",
-      "bb1:16b.j",
-      "green",
+      "bb1:14t.a",
+      "gold",
       [
-        "v-19.2"
+        "v-19.2",
+        "h186",
+        "v-240",
+        "h-201.6"
       ]
     ],
     [
       "uno:8",
-      "bb1:11b.j",
-      "red",
+      "bb1:12t.a",
+      "purple",
       [
         "v-19.2",
-        "h-28.4"
+        "h202",
+        "v-240",
+        "h-220.8"
       ]
     ],
     [
       "uno:9",
       "bb1:10t.a",
-      "green",
+      "purple",
       [
         "v-19.2",
         "h212",
@@ -324,7 +398,7 @@
     [
       "uno:10",
       "bb1:8t.a",
-      "gray",
+      "blue",
       [
         "v-19.2",
         "h221.5",
@@ -335,7 +409,7 @@
     [
       "uno:11",
       "bb1:6t.a",
-      "blue",
+      "gray",
       [
         "v-19.2",
         "h231",
@@ -346,12 +420,12 @@
     [
       "uno:12",
       "bb1:4t.a",
-      "brown",
+      "gray",
       [
         "v-19.2",
         "h240.5",
         "v-240",
-        "h-297.6"
+        "h-259.2"
       ]
     ],
     [
@@ -406,58 +480,8 @@
       ]
     ],
     [
-      "bb1:tn.19",
-      "bb1:23t.a",
-      "black",
-      [
-        "v0"
-      ]
-    ],
-    [
-      "bb1:tn.10",
-      "bb1:13t.a",
-      "black",
-      [
-        "v-0.1",
-        "h11.2"
-      ]
-    ],
-    [
-      "bb1:tn.11",
-      "bb1:14t.a",
-      "black",
-      [
-        "v0"
-      ]
-    ],
-    [
-      "bb1:tn.14",
-      "bb1:17t.a",
-      "black",
-      [
-        "v0"
-      ]
-    ],
-    [
-      "bb1:tn.16",
-      "bb1:19t.a",
-      "black",
-      [
-        "v-0.1",
-        "h-8"
-      ]
-    ],
-    [
-      "bb1:tn.17",
-      "bb1:21t.a",
-      "black",
-      [
-        "v0"
-      ]
-    ],
-    [
       "start-btn:1.l",
-      "bb1:14b.f",
+      "bb1:28b.f",
       "",
       [
         "$bb"
@@ -465,7 +489,7 @@
     ],
     [
       "start-btn:2.l",
-      "bb1:16b.f",
+      "bb1:30b.f",
       "",
       [
         "$bb"
@@ -473,70 +497,6 @@
     ],
     [
       "start-btn:1.r",
-      "bb1:14t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "start-btn:2.r",
-      "bb1:16t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "stop-btn:1.l",
-      "bb1:11b.f",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "stop-btn:2.l",
-      "bb1:13b.f",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "stop-btn:1.r",
-      "bb1:11t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "stop-btn:2.r",
-      "bb1:13t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "blender-led:A",
-      "bb1:30t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "blender-led:C",
-      "bb1:29t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "heater-led:A",
       "bb1:28t.e",
       "",
       [
@@ -544,23 +504,31 @@
       ]
     ],
     [
-      "heater-led:C",
-      "bb1:27t.e",
+      "start-btn:2.r",
+      "bb1:30t.e",
       "",
       [
         "$bb"
       ]
     ],
     [
-      "mixer-led:A",
-      "bb1:26t.e",
+      "stop-btn:1.l",
+      "bb1:25b.f",
       "",
       [
         "$bb"
       ]
     ],
     [
-      "mixer-led:C",
+      "stop-btn:2.l",
+      "bb1:27b.f",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "stop-btn:1.r",
       "bb1:25t.e",
       "",
       [
@@ -568,48 +536,8 @@
       ]
     ],
     [
-      "lower-drain-pump-led:A",
-      "bb1:22t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "lower-drain-pump-led:C",
-      "bb1:21t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "separator-hatch-direction-led:A",
-      "bb1:20t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "separator-hatch-direction-led:C",
-      "bb1:19t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "separator-hatch-enable-led:A",
-      "bb1:18t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "separator-hatch-enable-led:C",
-      "bb1:17t.e",
+      "stop-btn:2.r",
+      "bb1:27t.e",
       "",
       [
         "$bb"
@@ -617,70 +545,6 @@
     ],
     [
       "ready-led:A",
-      "bb1:10t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "ready-led:C",
-      "bb1:9t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "upper-drain-pump-led:A",
-      "bb1:8t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "upper-drain-pump-led:C",
-      "bb1:7t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "water-pump-led:A",
-      "bb1:6t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "water-pump-led:C",
-      "bb1:5t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "d12-led:A",
-      "bb1:4t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "d12-led:C",
-      "bb1:3t.e",
-      "",
-      [
-        "$bb"
-      ]
-    ],
-    [
-      "led4:A",
       "bb1:24t.e",
       "",
       [
@@ -688,8 +552,168 @@
       ]
     ],
     [
-      "led4:C",
+      "ready-led:C",
       "bb1:23t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "blender-led:A",
+      "bb1:22t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "blender-led:C",
+      "bb1:21t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "heater-led:A",
+      "bb1:20t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "heater-led:C",
+      "bb1:19t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "mixer-led:A",
+      "bb1:18t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "mixer-led:C",
+      "bb1:17t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "separator-hatch-enable-led:A",
+      "bb1:16t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "separator-hatch-enable-led:C",
+      "bb1:15t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "separator-hatch-direction-led:A",
+      "bb1:14t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "separator-hatch-direction-led:C",
+      "bb1:13t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "input-hatch-lock-direction-led:A",
+      "bb1:12t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "input-hatch-lock-direction-led:C",
+      "bb1:11t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "input-hatch-lock-enable-led:A",
+      "bb1:10t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "input-hatch-lock-enable-led:C",
+      "bb1:9t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "water-pump-led:A",
+      "bb1:8t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "water-pump-led:C",
+      "bb1:7t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "lower-drain-pump-led:A",
+      "bb1:6t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "lower-drain-pump-led:C",
+      "bb1:5t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "upper-drain-pump-led:A",
+      "bb1:4t.e",
+      "",
+      [
+        "$bb"
+      ]
+    ],
+    [
+      "upper-drain-pump-led:C",
+      "bb1:3t.e",
       "",
       [
         "$bb"
