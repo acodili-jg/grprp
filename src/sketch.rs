@@ -132,7 +132,8 @@ impl Sketch {
         self.state
     }
 
-    #[allow(clippy::too_many_lines)] // TODO - address
+    // TODO seriously, address these vvv
+    #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
     pub fn invoke(&mut self) {
         let curr_ms = millis();
         let delta_ms = curr_ms.wrapping_sub(self.last_ms);
@@ -293,6 +294,13 @@ impl Sketch {
                 transition_to!(Blending);
                 self.separator_hatch_enable.set_low();
                 self.blender.set_high();
+            }
+
+            State::Blending if delta_ms < duration::BLENDING => {}
+            State::Blending => {
+                transition_to!(PulpDraining);
+                self.blender.set_low();
+                self.lower_drain_pump.set_high();
             }
 
             _ => { /* TODO */ }
