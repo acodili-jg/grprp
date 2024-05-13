@@ -288,6 +288,13 @@ impl Sketch {
                 self.separator_hatch_enable.set_high();
             }
 
+            State::SeparatorClosing if delta_ms < duration::SEPARATOR_TRANSITION => {}
+            State::SeparatorClosing => {
+                transition_to!(Blending);
+                self.separator_hatch_enable.set_low();
+                self.blender.set_high();
+            }
+
             _ => { /* TODO */ }
         }
     }
