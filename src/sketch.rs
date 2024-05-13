@@ -311,6 +311,28 @@ impl Sketch {
                 self.separator_hatch_enable.set_high();
             }
 
+            State::SetupSeparatorOpening if delta_ms < duration::SEPARATOR_TRANSITION => {}
+            State::SetupSeparatorOpening => {
+                transition_to!(SetupWaterPumping);
+                self.separator_hatch_enable.set_low();
+                self.water_pump.set_high();
+            }
+
+            State::SetupWaterPumping if delta_ms < duration::SOAK_WATER_PUMPING => {}
+            State::SetupWaterPumping => {
+                transition_to!(SetupSeparatorClosing);
+                self.water_pump.set_low();
+                self.separator_hatch_direction.set_high();
+                self.separator_hatch_enable.set_high();
+            }
+
+            State::SetupSeparatorClosing if delta_ms < duration::SEPARATOR_TRANSITION => {}
+            State::SetupSeparatorClosing => {
+                transition_to!(Idling);
+                self.separator_hatch_enable.set_low();
+                self.ready.set_high();
+            }
+
             _ => { /* TODO */ }
         }
     }
