@@ -303,6 +303,14 @@ impl Sketch {
                 self.lower_drain_pump.set_high();
             }
 
+            State::PulpDraining if delta_ms < duration::DRAINING => {}
+            State::PulpDraining => {
+                transition_to!(SetupSeparatorOpening);
+                self.lower_drain_pump.set_low();
+                self.separator_hatch_direction.set_low();
+                self.separator_hatch_enable.set_high();
+            }
+
             _ => { /* TODO */ }
         }
     }
