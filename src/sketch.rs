@@ -275,6 +275,12 @@ impl Sketch {
                 self.separator_hatch_enable.set_high();
             }
 
+            State::SeparatorOpening if delta_ms < duration::SEPARATOR_TRANSITION => {}
+            State::SeparatorOpening => {
+                transition_to!(SeparatorHolding);
+                self.separator_hatch_enable.set_low();
+            }
+
             _ => { /* TODO */ }
         }
     }
