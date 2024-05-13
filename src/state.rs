@@ -25,4 +25,5 @@ pub enum State {
     SetupSeparatorClosing,
     Idling,
     Locking,
+    Unlocking,
 }

@@ -333,7 +333,30 @@ impl Sketch {
                 self.ready.set_high();
             }
 
-            _ => { /* TODO */ }
+            State::Idling if self.start.is_high() => {}
+            State::Idling => {
+                transition_to!(Locking);
+                self.input_hatch_lock_direction.set_low();
+                self.input_hatch_lock_enable.set_high();
+            }
+
+            State::Locking if self.start.is_high() => {
+                transition_to!(Unlocking);
+                self.input_hatch_lock_direction.set_high();
+            }
+            State::Locking if delta_ms < duration::LOCKING => {}
+            State::Locking => {
+                transition_to!(SoakWaterPumping);
+                self.ready.set_low();
+                self.input_hatch_lock_enable.set_low();
+                self.water_pump.set_high();
+            }
+
+            State::Unlocking if delta_ms < duration::LOCKING => {}
+            State::Unlocking => {
+                transition_to!(Idling);
+                self.input_hatch_lock_enable.set_low();
+            }
         }
     }
 }
