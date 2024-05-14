@@ -18,16 +18,24 @@ fn main() -> ! {
     // Enable interrupts (needed by `millis`)
     unsafe { avr_device::interrupt::enable() };
 
-    let mut sketch = sketch!(pins);
     let mut led = pins.d13.into_output();
+    let mut sketch = sketch!(pins);
 
-    let mut last_ms = millis();
+    let mut blink_last_ms = millis();
+    let mut sketch_last_ms = blink_last_ms;
+
     loop {
         let curr_ms = millis();
-        if curr_ms.wrapping_sub(last_ms) >= Millis::ONE_SECOND {
+
+        if sketch.update(curr_ms.wrapping_sub(sketch_last_ms)) {
+            sketch_last_ms = curr_ms;
+
+            // Resync d13 blinks
+            led.set_low();
+            blink_last_ms = curr_ms;
+        } else if curr_ms.wrapping_sub(blink_last_ms) >= Millis(500) {
             led.toggle();
-            last_ms = millis();
+            blink_last_ms = curr_ms;
         }
-        sketch.invoke();
     }
 }

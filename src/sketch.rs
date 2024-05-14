@@ -1,9 +1,8 @@
 use arduino_hal::port::mode::{Input, Output, PullUp};
 
 use crate::{
-    duration,
     millis::{millis, Millis},
-    state::State,
+    state::{self, State},
 };
 
 macro_rules! pin_type {
@@ -87,11 +86,12 @@ macro_rules! decl_sketch {
             pub fn new(
                 $(mut $pin_field : ::arduino_hal::port::Pin<$mode, pin_type!($pin)>,)*
             ) -> Self {
-                $($($init)?)*
-                Sketch {
+                let mut this = Sketch {
                     $($pin_field,)*
                     $($field : $default,)*
-                }
+                };
+                this.toggle_components();
+                this
             }
         }
 
@@ -118,8 +118,8 @@ decl_sketch! {
     input_hatch_lock_direction: pin!(Output, d8),
     input_hatch_lock_enable: pin!(Output, d9),
     water_pump: pin!(Output, d10),
-    lower_drain_pump: pin!(Output, d11) { lower_drain_pump.set_high() },
-    upper_drain_pump: pin!(Output, d12) { upper_drain_pump.set_high() },
+    lower_drain_pump: pin!(Output, d11),
+    upper_drain_pump: pin!(Output, d12),
     @
     state: State = State::default(),
     last_ms: Millis = millis(),
@@ -127,236 +127,74 @@ decl_sketch! {
 }
 
 impl Sketch {
+    #[inline]
     #[must_use]
     pub const fn state(&self) -> State {
         self.state
     }
 
-    // TODO seriously, address these vvv
-    #[allow(clippy::cognitive_complexity, clippy::too_many_lines)]
-    pub fn invoke(&mut self) {
-        let curr_ms = millis();
-        let delta_ms = curr_ms.wrapping_sub(self.last_ms);
-        let stopping = self.stopping | self.stop.is_low();
+    #[inline]
+    pub fn update(&mut self, delta_ms: Millis) -> bool {
+        let starting = self.start.is_low();
+        let stopping = self.stopping || self.stop.is_low();
         self.stopping = stopping;
 
-        macro_rules! transition_to {
-            ($state:ident) => {
-                self.state = $crate::state::State::$state;
-                self.last_ms = curr_ms;
+        let curr_state = self.state;
+        let overriding_state = state::override_for(curr_state, delta_ms, starting, stopping);
+
+        if let Some(next_state) = overriding_state {
+            self.toggle_components();
+
+            self.state = next_state;
+            self.stopping = self.stopping && !curr_state.is_idling();
+
+            self.toggle_components();
+
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Toggles components based on the current state.
+    ///
+    /// Usually called before and after a change in state with the former for
+    /// leaving and the latter for entering.
+    fn toggle_components(&mut self) {
+        macro_rules! implementation {
+            ($($state:ident ( $($pin:ident),* $(,)? )),* $(,)?) => {
+                match self.state {
+                    $($crate::state::State::$state => { $(self.$pin.toggle();)* })*
+                }
             };
         }
 
-        #[allow(clippy::match_same_arms)]
-        match self.state {
-            State::InitialDraining if delta_ms < duration::DRAINING => {}
-            State::InitialDraining => {
-                transition_to!(InitialIdling);
-                self.lower_drain_pump.set_low();
-                self.ready.set_high();
-                self.upper_drain_pump.set_low();
-            }
-
-            State::InitialIdling if self.start.is_high() => {}
-            State::InitialIdling => {
-                transition_to!(InitialLocking);
-                self.input_hatch_lock_direction.set_low();
-                self.input_hatch_lock_enable.set_high();
-            }
-
-            State::InitialLocking if self.start.is_high() => {
-                transition_to!(InitialUnlocking);
-                self.input_hatch_lock_direction.set_high();
-            }
-            State::InitialLocking if delta_ms < duration::LOCKING => {}
-            State::InitialLocking => {
-                transition_to!(InitialSetupSeparatorOpening);
-                self.ready.set_low();
-                self.input_hatch_lock_enable.set_low();
-                self.separator_hatch_enable.set_high();
-            }
-
-            State::InitialUnlocking if delta_ms < duration::LOCKING => {}
-            State::InitialUnlocking => {
-                transition_to!(InitialIdling);
-                self.input_hatch_lock_enable.set_low();
-            }
-
-            State::InitialSetupSeparatorOpening if delta_ms < duration::SEPARATOR_TRANSITION => {}
-            State::InitialSetupSeparatorOpening => {
-                transition_to!(InitialSetupWaterPumping);
-                self.separator_hatch_enable.set_low();
-                self.water_pump.set_high();
-            }
-
-            State::InitialSetupWaterPumping if delta_ms < duration::WATER_PUMPING => {}
-            State::InitialSetupWaterPumping => {
-                transition_to!(InitialSetupSeparatorClosing);
-                self.water_pump.set_low();
-                self.separator_hatch_direction.set_high();
-                self.separator_hatch_enable.set_high();
-            }
-
-            State::InitialSetupSeparatorClosing if delta_ms < duration::SEPARATOR_TRANSITION => {}
-            State::InitialSetupSeparatorClosing => {
-                transition_to!(SoakWaterPumping);
-                self.separator_hatch_enable.set_low();
-                self.water_pump.set_high();
-            }
-
-            State::SoakWaterPumping if stopping => {
-                transition_to!(SoakWaterDraining);
-                self.upper_drain_pump.set_high();
-                self.water_pump.set_low();
-            }
-            State::SoakWaterPumping if delta_ms < duration::WATER_PUMPING => {}
-            State::SoakWaterPumping => {
-                transition_to!(SoakWaterHeating);
-                self.water_pump.set_low();
-                self.heater.set_high();
-            }
-
-            State::SoakWaterHeating if stopping => {
-                transition_to!(SoakWaterDraining);
-                self.heater.set_low();
-                self.upper_drain_pump.set_high();
-            }
-            State::SoakWaterHeating if delta_ms < duration::HEATING => {}
-            State::SoakWaterHeating => {
-                transition_to!(SoakWaterHeatedMixing);
-                self.mixer.set_high();
-            }
-
-            State::SoakWaterHeatedMixing if stopping => {
-                transition_to!(SoakWaterDraining);
-                self.heater.set_low();
-                self.mixer.set_low();
-                self.upper_drain_pump.set_high();
-            }
-            State::SoakWaterHeatedMixing if delta_ms < duration::HEATED_MIXING => {}
-            State::SoakWaterHeatedMixing => {
-                transition_to!(SoakWaterMixing);
-                self.heater.set_low();
-            }
-
-            State::SoakWaterMixing if delta_ms < duration::MIXING && !stopping => {}
-            State::SoakWaterMixing => {
-                transition_to!(SoakWaterDraining);
-                self.mixer.set_low();
-                self.upper_drain_pump.set_high();
-            }
-
-            State::SoakWaterDraining if delta_ms < duration::DRAINING => {}
-            State::SoakWaterDraining if stopping => {
-                transition_to!(Idling);
-                self.upper_drain_pump.set_low();
-                self.ready.set_high();
-            }
-            State::SoakWaterDraining => {
-                transition_to!(RinseWaterPumping);
-                self.water_pump.set_high();
-            }
-
-            State::RinseWaterPumping if delta_ms < duration::RINSING => {}
-            State::RinseWaterPumping => {
-                transition_to!(RinseWaterDraining);
-                self.water_pump.set_low();
-            }
-
-            State::RinseWaterDraining if delta_ms < duration::DRAINING => {}
-            State::RinseWaterDraining if stopping => {
-                transition_to!(Idling);
-                self.upper_drain_pump.set_low();
-                self.ready.set_high();
-            }
-            State::RinseWaterDraining => {
-                transition_to!(SeparatorOpening);
-                self.upper_drain_pump.set_low();
-                self.separator_hatch_direction.set_low();
-                self.separator_hatch_enable.set_high();
-            }
-
-            State::SeparatorOpening if delta_ms < duration::SEPARATOR_TRANSITION => {}
-            State::SeparatorOpening => {
-                transition_to!(SeparatorHolding);
-                self.separator_hatch_enable.set_low();
-            }
-
-            State::SeparatorHolding if delta_ms < duration::SEPARATOR_HOLDING => {}
-            State::SeparatorHolding => {
-                transition_to!(SeparatorClosing);
-                self.separator_hatch_direction.set_high();
-                self.separator_hatch_enable.set_high();
-            }
-
-            State::SeparatorClosing if delta_ms < duration::SEPARATOR_TRANSITION => {}
-            State::SeparatorClosing => {
-                transition_to!(Blending);
-                self.separator_hatch_enable.set_low();
-                self.blender.set_high();
-            }
-
-            State::Blending if delta_ms < duration::BLENDING => {}
-            State::Blending => {
-                transition_to!(PulpDraining);
-                self.blender.set_low();
-                self.lower_drain_pump.set_high();
-            }
-
-            State::PulpDraining if delta_ms < duration::DRAINING => {}
-            State::PulpDraining => {
-                transition_to!(SetupSeparatorOpening);
-                self.lower_drain_pump.set_low();
-                self.separator_hatch_direction.set_low();
-                self.separator_hatch_enable.set_high();
-            }
-
-            State::SetupSeparatorOpening if delta_ms < duration::SEPARATOR_TRANSITION => {}
-            State::SetupSeparatorOpening => {
-                transition_to!(SetupWaterPumping);
-                self.separator_hatch_enable.set_low();
-                self.water_pump.set_high();
-            }
-
-            State::SetupWaterPumping if delta_ms < duration::WATER_PUMPING => {}
-            State::SetupWaterPumping => {
-                transition_to!(SetupSeparatorClosing);
-                self.water_pump.set_low();
-                self.separator_hatch_direction.set_high();
-                self.separator_hatch_enable.set_high();
-            }
-
-            State::SetupSeparatorClosing if delta_ms < duration::SEPARATOR_TRANSITION => {}
-            State::SetupSeparatorClosing => {
-                transition_to!(Idling);
-                self.separator_hatch_enable.set_low();
-                self.ready.set_high();
-            }
-
-            State::Idling if self.start.is_high() => {}
-            State::Idling => {
-                transition_to!(Locking);
-                self.input_hatch_lock_direction.set_low();
-                self.input_hatch_lock_enable.set_high();
-            }
-
-            State::Locking if self.start.is_high() => {
-                transition_to!(Unlocking);
-                self.input_hatch_lock_direction.set_high();
-            }
-            State::Locking if delta_ms < duration::LOCKING => {}
-            State::Locking => {
-                transition_to!(SoakWaterPumping);
-                self.ready.set_low();
-                self.input_hatch_lock_enable.set_low();
-                self.water_pump.set_high();
-            }
-
-            State::Unlocking if delta_ms < duration::LOCKING => {}
-            State::Unlocking => {
-                transition_to!(Idling);
-                self.input_hatch_lock_enable.set_low();
-            }
-        }
+        implementation!(
+            InitialDraining(lower_drain_pump, upper_drain_pump),
+            InitialIdling(ready),
+            InitialLocking(input_hatch_lock_enable, ready),
+            InitialUnlocking(input_hatch_lock_direction, input_hatch_lock_enable, ready),
+            InitialSetupSeparatorOpening(separator_hatch_enable),
+            InitialSetupWaterPumping(water_pump),
+            InitialSetupSeparatorClosing(separator_hatch_direction, separator_hatch_enable),
+            SoakWaterPumping(water_pump),
+            SoakWaterHeating(heater),
+            SoakWaterHeatedMixing(heater, mixer),
+            SoakWaterMixing(mixer),
+            SoakWaterDraining(upper_drain_pump),
+            RinseWaterPumping(upper_drain_pump, water_pump),
+            RinseWaterDraining(upper_drain_pump),
+            SeparatorOpening(separator_hatch_enable),
+            SeparatorHolding(),
+            SeparatorClosing(separator_hatch_direction, separator_hatch_enable),
+            Blending(blender),
+            PulpDraining(lower_drain_pump),
+            SetupSeparatorOpening(separator_hatch_enable),
+            SetupWaterPumping(water_pump),
+            SetupSeparatorClosing(separator_hatch_direction, separator_hatch_enable),
+            Idling(ready),
+            Locking(input_hatch_lock_enable, ready),
+            Unlocking(input_hatch_lock_direction, input_hatch_lock_enable, ready),
+        );
     }
 }

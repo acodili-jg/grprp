@@ -30,6 +30,13 @@ pub enum State {
     Unlocking,
 }
 
+impl State {
+    #[inline]
+    #[must_use] pub const fn is_idling(self) -> bool {
+        matches!(self, Self::InitialIdling | Self::Idling)
+    }
+}
+
 #[allow(clippy::cognitive_complexity)]
 #[must_use]
 pub fn override_for(curr: State, delta: Millis, starting: bool, stopping: bool) -> Option<State> {
@@ -64,7 +71,7 @@ pub fn override_for(curr: State, delta: Millis, starting: bool, stopping: bool) 
             State::SoakWaterDraining
         }
 
-        State::SoakWaterPumping if delta >= duration::WATER_PUMPING => State::SoakWaterDraining,
+        State::SoakWaterPumping if delta >= duration::WATER_PUMPING => State::SoakWaterHeating,
         State::SoakWaterHeating if delta >= duration::HEATING => State::SoakWaterHeatedMixing,
         State::SoakWaterHeatedMixing if delta >= duration::HEATED_MIXING => State::SoakWaterMixing,
         State::SoakWaterMixing if delta >= duration::MIXING => State::SoakWaterDraining,
