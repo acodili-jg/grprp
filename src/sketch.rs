@@ -189,7 +189,7 @@ impl Sketch {
                 self.water_pump.set_high();
             }
 
-            State::InitialSetupWaterPumping if delta_ms < duration::SOAK_WATER_PUMPING => {}
+            State::InitialSetupWaterPumping if delta_ms < duration::WATER_PUMPING => {}
             State::InitialSetupWaterPumping => {
                 transition_to!(InitialSetupSeparatorClosing);
                 self.water_pump.set_low();
@@ -209,7 +209,7 @@ impl Sketch {
                 self.upper_drain_pump.set_high();
                 self.water_pump.set_low();
             }
-            State::SoakWaterPumping if delta_ms < duration::SOAK_WATER_PUMPING => {}
+            State::SoakWaterPumping if delta_ms < duration::WATER_PUMPING => {}
             State::SoakWaterPumping => {
                 transition_to!(SoakWaterHeating);
                 self.water_pump.set_low();
@@ -318,7 +318,7 @@ impl Sketch {
                 self.water_pump.set_high();
             }
 
-            State::SetupWaterPumping if delta_ms < duration::SOAK_WATER_PUMPING => {}
+            State::SetupWaterPumping if delta_ms < duration::WATER_PUMPING => {}
             State::SetupWaterPumping => {
                 transition_to!(SetupSeparatorClosing);
                 self.water_pump.set_low();
