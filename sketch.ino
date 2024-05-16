@@ -257,11 +257,11 @@ uint_fast16_t affected_components(state::State state) {
                 | 1 << pin::MIXER;
         case State::SOAK_WATER_DRAINING:
             return UINT16_C(0)
-                | 1 << pin::UPPER_DRAIN_PUMP
-                | 1 << pin::WATER_PUMP;
+                | 1 << pin::UPPER_DRAIN_PUMP;
         case State::RINSE_WATER_PUMPING:
             return UINT16_C(0)
-                | 1 << pin::UPPER_DRAIN_PUMP;
+                | 1 << pin::UPPER_DRAIN_PUMP
+                | 1 << pin::WATER_PUMP;
         case State::RINSE_WATER_DRAINING:
             return UINT16_C(0)
                 | 1 << pin::UPPER_DRAIN_PUMP;
