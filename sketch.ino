@@ -343,7 +343,7 @@ void setup() {
     pinMode(pin::BLINK, OUTPUT);
 
     __blink_last_ms = millis();
-    __blink_voltage = LOW;
+    digitalWrite(pin::BLINK, __blink_voltage = HIGH);
 
     __state_last_ms = millis();
     __stopping = false;
@@ -381,7 +381,7 @@ void loop() {
         __state_last_ms = curr_ms;
 
         // Resync blinks
-        digitalWrite(pin::BLINK, __blink_voltage = LOW);
+        digitalWrite(pin::BLINK, __blink_voltage = HIGH);
         __blink_last_ms = curr_ms;
     } else if ((unsigned long) (curr_ms - __blink_last_ms) >= 500) {
         digitalWrite(pin::BLINK, __blink_voltage ^= HIGH);
