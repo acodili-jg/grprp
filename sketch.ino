@@ -1,3 +1,7 @@
+// NOTE: namespace custom types must be fully-qualified when used as parameter
+//       types probably due to the preprocessor; non-namespaced custom types are
+//       unreferrable in a single-file.
+
 namespace duration {
     // Unless otherwise state, the following are in milliseconds (ms)
 
@@ -78,7 +82,6 @@ namespace state {
     // would that there is no change. As of writing this, TinkerCAD uses C++ 14
     // which does not have std::optional from C++ 17.
     State override_for(
-        // compiler error when not qualified
         state::State curr,
         unsigned long delta_ms,
         bool starting,
