@@ -3,7 +3,7 @@ namespace duration {
 
     const unsigned long DEFAULT_LONG  = 5000uL;
     const unsigned long DEFAULT_SHORT =  500uL;
-    // Intentionally misspelt due to the pressence of a macro named `DEFAULT`
+    // Intentionally misspelt due to the presence of a macro named `DEFAULT`
     const unsigned long DEFUALT       = 2000uL;
 
     const unsigned long BLENDING = DEFAULT_LONG;
