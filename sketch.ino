@@ -25,18 +25,18 @@ namespace duration {
 namespace pin {
     const unsigned int START = 0;
     const unsigned int STOP = 1;
-    const unsigned int READY = 2;
-    const unsigned int BLENDER = 3;
+    const unsigned int INPUT_HATCH_CLOSED = 2;
+    const unsigned int BLINK = 3;
     const unsigned int HEATER = 4;
-    const unsigned int MIXER = 5;
-    const unsigned int SEPARATOR_HATCH_ENABLE = 6;
+    const unsigned int SEPARATOR_HATCH_ENABLE = 5;
+    const unsigned int INPUT_HATCH_LOCK_ENABLE = 6;
     const unsigned int SEPARATOR_HATCH_DIRECTION = 7;
     const unsigned int INPUT_HATCH_LOCK_DIRECTION = 8;
-    const unsigned int INPUT_HATCH_LOCK_ENABLE = 9;
-    const unsigned int WATER_PUMP = 10;
-    const unsigned int LOWER_DRAIN_PUMP = 11;
-    const unsigned int UPPER_DRAIN_PUMP = 12;
-    const unsigned int BLINK = 13;
+    const unsigned int BLENDER = 9;
+    const unsigned int MIXER = 10;
+    const unsigned int WATER_PUMP = 11;
+    const unsigned int LOWER_DRAIN_PUMP = 12;
+    const unsigned int UPPER_DRAIN_PUMP = 13;
 }
 
 namespace state {
@@ -84,7 +84,7 @@ namespace state {
     State override_for(
         state::State curr,
         unsigned long delta_ms,
-        bool starting,
+        bool locking,
         bool stopping
     ) {
         switch (curr) {
@@ -92,14 +92,16 @@ namespace state {
                 return State::INITIAL_IDLING;
             } break;
 
-            case State::INITIAL_IDLING: if (starting) {
+            case State::INITIAL_IDLING: if (locking) {
                 return State::INITIAL_LOCKING;
             } break;
 
-            case State::INITIAL_LOCKING: if (!starting) {
-                return State::INITIAL_UNLOCKING;
-            } else if (delta_ms >= duration::LOCKING) {
-                return State::INITIAL_SETUP_SEPARATOR_OPENING;
+            case State::INITIAL_LOCKING: if (delta_ms >= duration::LOCKING) {
+                if (locking) {
+                    return State::INITIAL_SETUP_SEPARATOR_OPENING;
+                } else {
+                    return State::INITIAL_UNLOCKING;
+                }
             } break;
 
             case State::INITIAL_UNLOCKING: if (delta_ms >= duration::LOCKING) {
@@ -142,7 +144,7 @@ namespace state {
 
             case State::SOAK_WATER_DRAINING: if (delta_ms >= duration::DRAINING) {
                 if (stopping) {
-                    return State::IDLING;
+                    return State::UNLOCKING;
                 } else {
                     return State::RINSE_WATER_PUMPING;
                 }
@@ -154,7 +156,7 @@ namespace state {
 
             case State::RINSE_WATER_DRAINING: if (delta_ms >= duration::DRAINING) {
                 if (stopping) {
-                    return State::IDLING;
+                    return State::UNLOCKING;
                 } else {
                     return State::SEPARATOR_OPENING;
                 }
@@ -189,17 +191,19 @@ namespace state {
             } break;
 
             case State::SETUP_SEPARATOR_CLOSING: if (delta_ms >= duration::SEPARATOR_TRANSITION) {
-                return State::IDLING;
+                return State::UNLOCKING;
             } break;
 
-            case State::IDLING: if (starting) {
+            case State::IDLING: if (locking) {
                 return State::LOCKING;
             } break;
 
-            case State::LOCKING: if (!starting) {
-                return State::UNLOCKING;
-            } else if (delta_ms >= duration::LOCKING) {
-                return State::SOAK_WATER_PUMPING;
+            case State::LOCKING: if (delta_ms >= duration::LOCKING) {
+                if (locking) {
+                    return State::SOAK_WATER_PUMPING;
+                } else {
+                    return State::UNLOCKING;
+                }
             } break;
 
             case State::UNLOCKING: if (delta_ms >= duration::LOCKING) {
@@ -222,7 +226,7 @@ uint_fast16_t affected_components(state::State state) {
                 | 1 << pin::UPPER_DRAIN_PUMP;
         case State::INITIAL_IDLING:
             return UINT16_C(0)
-                | 1 << pin::READY;
+                | 1 << pin::BLINK;
         case State::INITIAL_LOCKING:
             return UINT16_C(0)
                 | 1 << pin::INPUT_HATCH_LOCK_ENABLE
@@ -231,7 +235,7 @@ uint_fast16_t affected_components(state::State state) {
             return UINT16_C(0)
                 | 1 << pin::INPUT_HATCH_LOCK_DIRECTION
                 | 1 << pin::INPUT_HATCH_LOCK_ENABLE
-                | 1 << pin::READY;
+                | 1 << pin::BLINK;
         case State::INITIAL_SETUP_SEPARATOR_OPENING:
             return UINT16_C(0)
                 | 1 << pin::SEPARATOR_HATCH_ENABLE;
@@ -292,7 +296,7 @@ uint_fast16_t affected_components(state::State state) {
                 | 1 << pin::SEPARATOR_HATCH_ENABLE;
         case State::IDLING:
             return UINT16_C(0)
-                | 1 << pin::READY;
+                | 1 << pin::BLINK;
         case State::LOCKING:
             return UINT16_C(0)
                 | 1 << pin::INPUT_HATCH_LOCK_ENABLE
@@ -301,7 +305,7 @@ uint_fast16_t affected_components(state::State state) {
             return UINT16_C(0)
                 | 1 << pin::INPUT_HATCH_LOCK_DIRECTION
                 | 1 << pin::INPUT_HATCH_LOCK_ENABLE
-                | 1 << pin::READY;
+                | 1 << pin::BLINK;
     }
 }
 
@@ -323,13 +327,14 @@ unsigned long __blink_last_ms;
 unsigned long __blink_voltage;
 
 unsigned long __state_last_ms;
+bool __locking;
 bool __stopping;
 State __state;
 
 void setup() {
     pinMode(pin::STOP, INPUT_PULLUP);
     pinMode(pin::START, INPUT_PULLUP);
-    pinMode(pin::READY, OUTPUT);
+    pinMode(pin::INPUT_HATCH_CLOSED, INPUT_PULLUP);
     pinMode(pin::BLENDER, OUTPUT);
     pinMode(pin::HEATER, OUTPUT);
     pinMode(pin::MIXER, OUTPUT);
@@ -346,6 +351,7 @@ void setup() {
     digitalWrite(pin::BLINK, __blink_voltage = HIGH);
 
     __state_last_ms = millis();
+    __locking = false;
     __stopping = false;
     __state = State::INITIAL_DRAINING;
 
@@ -354,19 +360,20 @@ void setup() {
 
 bool update(unsigned long delta_ms) {
     const bool starting = !digitalRead(pin::START);
-    const bool stopping = __stopping || !digitalRead(pin::STOP);
-    __stopping = stopping;
+    const bool closed = !digitalRead(pin::INPUT_HATCH_CLOSED);
+    const bool locking = __locking = (__locking || starting) && closed;
+    const bool stopping = __stopping = __stopping || !digitalRead(pin::STOP);
 
     const State curr_state = __state;
-    const State next_state = state::override_for(curr_state, delta_ms, starting, stopping);
+    const State next_state = state::override_for(curr_state, delta_ms, locking, stopping);
 
     if (curr_state != next_state) {
         toggle_components(curr_state, LOW);
-
         __state = next_state;
         __stopping = stopping && !state::is_idling(curr_state);
 
         toggle_components(next_state, HIGH);
+        __locking = locking && !state::is_idling(curr_state);
 
         return true;
     } else {
@@ -383,7 +390,7 @@ void loop() {
         // Resync blinks
         digitalWrite(pin::BLINK, __blink_voltage = HIGH);
         __blink_last_ms = curr_ms;
-    } else if ((unsigned long) (curr_ms - __blink_last_ms) >= 500) {
+    } else if (!state::is_idling(__state) && (unsigned long) (curr_ms - __blink_last_ms) >= 500) {
         digitalWrite(pin::BLINK, __blink_voltage ^= HIGH);
         __blink_last_ms = curr_ms;
     }
