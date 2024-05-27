@@ -1,397 +1,427 @@
-// NOTE: namespace custom types must be fully-qualified when used as parameter
-//       types probably due to the preprocessor; non-namespaced custom types are
-//       unreferrable in a single-file.
+// TODO add state as delay and to differentiate continue from cancel
 
+/// Durations in milliseconds (ms).
 namespace duration {
-    // Unless otherwise state, the following are in milliseconds (ms)
+    constexpr unsigned long DEFAULT_LONG = 1000uL;
+    constexpr unsigned long DEFAULT_NORMAL = 1000uL;
+    constexpr unsigned long DEFAULT_SHORT = 1000uL;
 
-    const unsigned long DEFAULT_LONG  = 5000uL;
-    const unsigned long DEFAULT_SHORT =  500uL;
-    // Intentionally misspelt due to the presence of a macro named `DEFAULT`
-    const unsigned long DEFUALT       = 2000uL;
-
-    const unsigned long BLENDING = DEFAULT_LONG;
-    const unsigned long DRAINING = DEFAULT_LONG;
-    const unsigned long HEATED_MIXING = DEFUALT;
-    const unsigned long HEATING = DEFAULT_LONG;
-    const unsigned long LOCKING = DEFAULT_SHORT;
-    const unsigned long MIXING = DEFAULT_LONG;
-    const unsigned long RINSING = DEFAULT_LONG;
-    const unsigned long SEPARATOR_HOLDING = DEFAULT_LONG;
-    const unsigned long SEPARATOR_TRANSITION = DEFUALT;
-    const unsigned long WATER_PUMPING = DEFAULT_LONG;
+    constexpr unsigned long BLINKING = 250uL;
+    constexpr unsigned long HEATED_MIXING = DEFAULT_LONG;
+    constexpr unsigned long MIXING = DEFAULT_LONG;
+    constexpr unsigned long RINSE_BLEND_PAUSE = DEFAULT_NORMAL;
+    constexpr unsigned long RINSING = DEFAULT_LONG;
+    constexpr unsigned long WATER_DRAINING = DEFAULT_NORMAL;
+    constexpr unsigned long WATER_PUMPING = DEFAULT_LONG;
 }
 
+/// Pin naming/aliasing.
 namespace pin {
-    const unsigned int START = 0;
-    const unsigned int STOP = 1;
-    const unsigned int INPUT_HATCH_CLOSED = 2;
-    const unsigned int BLINK = 3;
-    const unsigned int HEATER = 4;
-    const unsigned int SEPARATOR_HATCH_ENABLE = 5;
-    const unsigned int INPUT_HATCH_LOCK_ENABLE = 6;
-    const unsigned int SEPARATOR_HATCH_DIRECTION = 7;
-    const unsigned int INPUT_HATCH_LOCK_DIRECTION = 8;
-    const unsigned int BLENDER = 9;
-    const unsigned int MIXER = 10;
-    const unsigned int WATER_PUMP = 11;
-    const unsigned int LOWER_DRAIN_PUMP = 12;
-    const unsigned int UPPER_DRAIN_PUMP = 13;
+    constexpr uint8_t START = 2;
+    constexpr uint8_t CANCEL_OR_CONTINUE = 3;
+    constexpr uint8_t SEPARATOR_CLOSED = 4;
+    constexpr uint8_t LOWER_WATER_PUMP = 5;
+    constexpr uint8_t UPPER_WATER_PUMP = 6;
+    constexpr uint8_t LOWER_DRAIN_CLOSED = 7;
+    constexpr uint8_t UPPER_DRAIN_CLOSED = 8;
+    constexpr uint8_t HEATER = 9;
+    constexpr uint8_t BLENDER = 10;
+    constexpr uint8_t MIXER = 11;
+    constexpr uint8_t BLINK_1 = 12;
+    constexpr uint8_t BLINK_2 = 13;
 }
 
+/// State definitions.
 namespace state {
-    enum class State {
-        INITIAL_DRAINING,
-        INITIAL_IDLING,
-        INITIAL_LOCKING,
-        INITIAL_UNLOCKING,
-        INITIAL_SETUP_SEPARATOR_OPENING,
-        INITIAL_SETUP_WATER_PUMPING,
-        INITIAL_SETUP_SEPARATOR_CLOSING,
-        SOAK_WATER_PUMPING,
-        SOAK_WATER_HEATING,
-        SOAK_WATER_HEATED_MIXING,
-        SOAK_WATER_MIXING,
-        SOAK_WATER_DRAINING,
-        RINSE_WATER_PUMPING,
+    /// Enumerates the valid states of this sketch.
+    enum class State: uint8_t {
+        /// Ready to start.
+        READY,
+        /// Manual confirmation components are properly closed/opened.
+        PRE_MIXING_CHECKING,
+        /// Intermediate state to detect unpress and avoid cancels.
+        PRE_MIXING_GUARD,
+        /// Pump water, used for mixing.
+        MIXING_WATER_PUMPING,
+        /// Mixing while also heating the water.
+        HEATED_MIXING,
+        /// Mixing.
+        MIXING,
+        /// Manual confirmation components are properly closed/opened.
+        PRE_RINSING_CHECKING,
+        /// Intermediate state to detect unpress and avoid cancels.
+        PRE_RINSING_GUARD,
+        /// Draining the water used in mixing.
+        MIXING_WATER_DRAINING,
+        /// Rinsing with running water.
+        RINSING,
+        /// Drain remaining rinse water.
         RINSE_WATER_DRAINING,
-        SEPARATOR_OPENING,
-        SEPARATOR_HOLDING,
-        SEPARATOR_CLOSING,
+        /// Manual confirmation components are properly closed/opened.
+        POST_RINSING_CHECKING,
+        /// Intermediate state to detect unpress and avoid cancels.
+        POST_RINSING_GUARD,
+        /// A quick pause to allow most materials to slip down the open separator.
+        RINSE_BLEND_PAUSE,
+        /// Manual confirmation components are properly closed/opened.
+        PRE_BLENDING_CHECKING,
+        /// Intermediate state to detect unpress and avoid cancels.
+        PRE_BLENDING_GUARD,
+        /// Pump water, used for blending.
+        BLENDING_WATER_PUMPING,
+        /// Blending.
         BLENDING,
-        PULP_DRAINING,
-        SETUP_SEPARATOR_OPENING,
-        SETUP_WATER_PUMPING,
-        SETUP_SEPARATOR_CLOSING,
-        IDLING,
-        LOCKING,
-        UNLOCKING
+        /// Manual confirmation components are properly closed/opened.
+        POST_BLENDING_CHECKING,
+        /// Draining the water used in blending.
+        BLENDING_WATER_DRAINING
     };
 
-    bool is_idling(state::State state) {
+    /**
+     * The pins that will receive {@link digitalWrite} for a state.
+     * <p>
+     * A set of pins encoded as binary starting the least significant bit to the
+     * most significant bit with {@code 1}s meaning its part of the set.
+     *
+     * @param state the state
+     * @return a set of pins in binary representation
+     */
+    uint16_t pins(state::State state) {
         switch (state) {
-            case State::INITIAL_IDLING:
-            case State::IDLING:
-                return true;
+            case State::READY:
+                return UINT16_C(0);
+            case State::PRE_MIXING_CHECKING:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::SEPARATOR_CLOSED
+                    | UINT16_C(1) << pin::LOWER_DRAIN_CLOSED
+                    | UINT16_C(1) << pin::UPPER_DRAIN_CLOSED;
+            case State::PRE_MIXING_GUARD:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::BLINK_2
+                    | UINT16_C(1) << pin::SEPARATOR_CLOSED
+                    | UINT16_C(1) << pin::LOWER_DRAIN_CLOSED
+                    | UINT16_C(1) << pin::UPPER_DRAIN_CLOSED;
+            case State::MIXING_WATER_PUMPING:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::SEPARATOR_CLOSED
+                    | UINT16_C(1) << pin::UPPER_WATER_PUMP
+                    | UINT16_C(1) << pin::LOWER_DRAIN_CLOSED
+                    | UINT16_C(1) << pin::UPPER_DRAIN_CLOSED;
+            case State::HEATED_MIXING:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::SEPARATOR_CLOSED
+                    | UINT16_C(1) << pin::LOWER_DRAIN_CLOSED
+                    | UINT16_C(1) << pin::UPPER_DRAIN_CLOSED
+                    | UINT16_C(1) << pin::HEATER
+                    | UINT16_C(1) << pin::MIXER;
+            case State::MIXING:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::SEPARATOR_CLOSED
+                    | UINT16_C(1) << pin::LOWER_DRAIN_CLOSED
+                    | UINT16_C(1) << pin::UPPER_DRAIN_CLOSED
+                    | UINT16_C(1) << pin::MIXER;
+            case State::PRE_RINSING_CHECKING:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::BLINK_2
+                    | UINT16_C(1) << pin::SEPARATOR_CLOSED
+                    | UINT16_C(1) << pin::LOWER_DRAIN_CLOSED;
+            case State::PRE_RINSING_GUARD:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::SEPARATOR_CLOSED
+                    | UINT16_C(1) << pin::LOWER_DRAIN_CLOSED;
+            case State::MIXING_WATER_DRAINING:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::SEPARATOR_CLOSED
+                    | UINT16_C(1) << pin::LOWER_DRAIN_CLOSED;
+            case State::RINSING:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::SEPARATOR_CLOSED
+                    | UINT16_C(1) << pin::UPPER_WATER_PUMP
+                    | UINT16_C(1) << pin::LOWER_DRAIN_CLOSED;
+            case State::RINSE_WATER_DRAINING:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::SEPARATOR_CLOSED
+                    | UINT16_C(1) << pin::LOWER_DRAIN_CLOSED;
+            case State::POST_RINSING_CHECKING:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::BLINK_2
+                    | UINT16_C(1) << pin::LOWER_DRAIN_CLOSED
+                    | UINT16_C(1) << pin::UPPER_DRAIN_CLOSED;
+            case State::POST_RINSING_GUARD:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::LOWER_DRAIN_CLOSED
+                    | UINT16_C(1) << pin::UPPER_DRAIN_CLOSED;
+            case State::RINSE_BLEND_PAUSE:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::LOWER_DRAIN_CLOSED
+                    | UINT16_C(1) << pin::UPPER_DRAIN_CLOSED;
+            case State::PRE_BLENDING_CHECKING:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::BLINK_2
+                    | UINT16_C(1) << pin::SEPARATOR_CLOSED
+                    | UINT16_C(1) << pin::LOWER_DRAIN_CLOSED
+                    | UINT16_C(1) << pin::UPPER_DRAIN_CLOSED;
+            case State::PRE_BLENDING_GUARD:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::SEPARATOR_CLOSED
+                    | UINT16_C(1) << pin::LOWER_DRAIN_CLOSED
+                    | UINT16_C(1) << pin::UPPER_DRAIN_CLOSED;
+            case State::BLENDING_WATER_PUMPING:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::LOWER_WATER_PUMP
+                    | UINT16_C(1) << pin::SEPARATOR_CLOSED
+                    | UINT16_C(1) << pin::LOWER_DRAIN_CLOSED
+                    | UINT16_C(1) << pin::UPPER_DRAIN_CLOSED;
+            case State::BLENDING:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::SEPARATOR_CLOSED
+                    | UINT16_C(1) << pin::LOWER_DRAIN_CLOSED
+                    | UINT16_C(1) << pin::UPPER_DRAIN_CLOSED
+                    | UINT16_C(1) << pin::BLENDER;
+            case State::POST_BLENDING_CHECKING:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::SEPARATOR_CLOSED
+                    | UINT16_C(1) << pin::UPPER_DRAIN_CLOSED;
+            case State::BLENDING_WATER_DRAINING:
+                return UINT16_C(0)
+                    | UINT16_C(1) << pin::BLINK_1
+                    | UINT16_C(1) << pin::SEPARATOR_CLOSED
+                    | UINT16_C(1) << pin::UPPER_DRAIN_CLOSED;
             default:
-                return false;
+                return UINT16_C(0);
         }
-    }
-
-    // Determines the state to override the current or the same state which
-    // would that there is no change. As of writing this, TinkerCAD uses C++ 14
-    // which does not have std::optional from C++ 17.
-    State override_for(
-        state::State curr,
-        unsigned long delta_ms,
-        bool locking,
-        bool stopping
-    ) {
-        switch (curr) {
-            case State::INITIAL_DRAINING: if (delta_ms >= duration::DRAINING) {
-                return State::INITIAL_IDLING;
-            } break;
-
-            case State::INITIAL_IDLING: if (locking) {
-                return State::INITIAL_LOCKING;
-            } break;
-
-            case State::INITIAL_LOCKING: if (delta_ms >= duration::LOCKING) {
-                if (locking) {
-                    return State::INITIAL_SETUP_SEPARATOR_OPENING;
-                } else {
-                    return State::INITIAL_UNLOCKING;
-                }
-            } break;
-
-            case State::INITIAL_UNLOCKING: if (delta_ms >= duration::LOCKING) {
-                return State::INITIAL_IDLING;
-            } break;
-
-            case State::INITIAL_SETUP_SEPARATOR_OPENING: if (delta_ms >= duration::SEPARATOR_TRANSITION) {
-                return State::INITIAL_SETUP_WATER_PUMPING;
-            } break;
-
-            case State::INITIAL_SETUP_WATER_PUMPING: if (delta_ms >= duration::WATER_PUMPING) {
-                return State::INITIAL_SETUP_SEPARATOR_CLOSING;
-            } break;
-
-            case State::INITIAL_SETUP_SEPARATOR_CLOSING: if (delta_ms >= duration::SEPARATOR_TRANSITION) {
-                return State::SOAK_WATER_PUMPING;
-            } break;
-
-            case State::SOAK_WATER_PUMPING: if (stopping) {
-                return State::SOAK_WATER_DRAINING;
-            } else if (delta_ms >= duration::WATER_PUMPING) {
-                return State::SOAK_WATER_HEATING;
-            } break;
-
-            case State::SOAK_WATER_HEATING: if (stopping) {
-                return State::SOAK_WATER_DRAINING;
-            } else if (delta_ms >= duration::HEATING) {
-                return State::SOAK_WATER_HEATED_MIXING;
-            } break;
-
-            case State::SOAK_WATER_HEATED_MIXING: if (stopping) {
-                return State::SOAK_WATER_DRAINING;
-            } else if (delta_ms >= duration::HEATED_MIXING) {
-                return State::SOAK_WATER_MIXING;
-            } break;
-
-            case State::SOAK_WATER_MIXING: if (stopping || delta_ms >= duration::MIXING) {
-                return State::SOAK_WATER_DRAINING;
-            } break;
-
-            case State::SOAK_WATER_DRAINING: if (delta_ms >= duration::DRAINING) {
-                if (stopping) {
-                    return State::UNLOCKING;
-                } else {
-                    return State::RINSE_WATER_PUMPING;
-                }
-            } break;
-
-            case State::RINSE_WATER_PUMPING: if (stopping || delta_ms >= duration::RINSING) {
-                return State::RINSE_WATER_DRAINING;
-            } break;
-
-            case State::RINSE_WATER_DRAINING: if (delta_ms >= duration::DRAINING) {
-                if (stopping) {
-                    return State::UNLOCKING;
-                } else {
-                    return State::SEPARATOR_OPENING;
-                }
-            } break;
-
-            case State::SEPARATOR_OPENING: if (delta_ms >= duration::SEPARATOR_TRANSITION) {
-                return State::SEPARATOR_HOLDING;
-            } break;
-
-            case State::SEPARATOR_HOLDING: if (delta_ms >= duration::SEPARATOR_HOLDING) {
-                return State::SEPARATOR_CLOSING;
-            } break;
-
-            case State::SEPARATOR_CLOSING: if (delta_ms >= duration::SEPARATOR_TRANSITION) {
-                return State::BLENDING;
-            } break;
-
-            case State::BLENDING: if (delta_ms >= duration::BLENDING) {
-                return State::PULP_DRAINING;
-            } break;
-
-            case State::PULP_DRAINING: if (delta_ms >= duration::DRAINING) {
-                return State::SETUP_SEPARATOR_OPENING;
-            } break;
-
-            case State::SETUP_SEPARATOR_OPENING: if (delta_ms >= duration::SEPARATOR_TRANSITION) {
-                return State::SETUP_WATER_PUMPING;
-            } break;
-
-            case State::SETUP_WATER_PUMPING: if (delta_ms >= duration::WATER_PUMPING) {
-                return State::SETUP_SEPARATOR_CLOSING;
-            } break;
-
-            case State::SETUP_SEPARATOR_CLOSING: if (delta_ms >= duration::SEPARATOR_TRANSITION) {
-                return State::UNLOCKING;
-            } break;
-
-            case State::IDLING: if (locking) {
-                return State::LOCKING;
-            } break;
-
-            case State::LOCKING: if (delta_ms >= duration::LOCKING) {
-                if (locking) {
-                    return State::SOAK_WATER_PUMPING;
-                } else {
-                    return State::UNLOCKING;
-                }
-            } break;
-
-            case State::UNLOCKING: if (delta_ms >= duration::LOCKING) {
-                return State::IDLING;
-            } break;
-        }
-
-        // default return-value
-        return curr;
     }
 }
 
 using state::State;
 
-uint_fast16_t affected_components(state::State state) {
-    switch (state) {
-        case State::INITIAL_DRAINING:
-            return UINT16_C(0)
-                | 1 << pin::LOWER_DRAIN_PUMP
-                | 1 << pin::UPPER_DRAIN_PUMP;
-        case State::INITIAL_IDLING:
-            return UINT16_C(0)
-                | 1 << pin::BLINK;
-        case State::INITIAL_LOCKING:
-            return UINT16_C(0)
-                | 1 << pin::INPUT_HATCH_LOCK_ENABLE
-                | 1 << pin::UPPER_DRAIN_PUMP;
-        case State::INITIAL_UNLOCKING:
-            return UINT16_C(0)
-                | 1 << pin::INPUT_HATCH_LOCK_DIRECTION
-                | 1 << pin::INPUT_HATCH_LOCK_ENABLE
-                | 1 << pin::BLINK;
-        case State::INITIAL_SETUP_SEPARATOR_OPENING:
-            return UINT16_C(0)
-                | 1 << pin::SEPARATOR_HATCH_ENABLE;
-        case State::INITIAL_SETUP_WATER_PUMPING:
-            return UINT16_C(0)
-                | 1 << pin::WATER_PUMP;
-        case State::INITIAL_SETUP_SEPARATOR_CLOSING:
-            return UINT16_C(0)
-                | 1 << pin::SEPARATOR_HATCH_DIRECTION
-                | 1 << pin::SEPARATOR_HATCH_ENABLE;
-        case State::SOAK_WATER_PUMPING:
-            return UINT16_C(0)
-                | 1 << pin::WATER_PUMP;
-        case State::SOAK_WATER_HEATING:
-            return UINT16_C(0)
-                | 1 << pin::HEATER;
-        case State::SOAK_WATER_HEATED_MIXING:
-            return UINT16_C(0)
-                | 1 << pin::HEATER
-                | 1 << pin::MIXER;
-        case State::SOAK_WATER_MIXING:
-            return UINT16_C(0)
-                | 1 << pin::MIXER;
-        case State::SOAK_WATER_DRAINING:
-            return UINT16_C(0)
-                | 1 << pin::UPPER_DRAIN_PUMP;
-        case State::RINSE_WATER_PUMPING:
-            return UINT16_C(0)
-                | 1 << pin::UPPER_DRAIN_PUMP
-                | 1 << pin::WATER_PUMP;
-        case State::RINSE_WATER_DRAINING:
-            return UINT16_C(0)
-                | 1 << pin::UPPER_DRAIN_PUMP;
-        case State::SEPARATOR_OPENING:
-            return UINT16_C(0)
-                | 1 << pin::SEPARATOR_HATCH_ENABLE;
-        case State::SEPARATOR_HOLDING:
-            return UINT16_C(0);
-        case State::SEPARATOR_CLOSING:
-            return UINT16_C(0)
-                | 1 << pin::SEPARATOR_HATCH_DIRECTION
-                | 1 << pin::SEPARATOR_HATCH_ENABLE;
-        case State::BLENDING:
-            return UINT16_C(0)
-                | 1 << pin::BLENDER;
-        case State::PULP_DRAINING:
-            return UINT16_C(0)
-                | 1 << pin::LOWER_DRAIN_PUMP;
-        case State::SETUP_SEPARATOR_OPENING:
-            return UINT16_C(0)
-                | 1 << pin::SEPARATOR_HATCH_ENABLE;
-        case State::SETUP_WATER_PUMPING:
-            return UINT16_C(0)
-                | 1 << pin::WATER_PUMP;
-        case State::SETUP_SEPARATOR_CLOSING:
-            return UINT16_C(0)
-                | 1 << pin::SEPARATOR_HATCH_DIRECTION
-                | 1 << pin::SEPARATOR_HATCH_ENABLE;
-        case State::IDLING:
-            return UINT16_C(0)
-                | 1 << pin::BLINK;
-        case State::LOCKING:
-            return UINT16_C(0)
-                | 1 << pin::INPUT_HATCH_LOCK_ENABLE
-                | 1 << pin::UPPER_DRAIN_PUMP;
-        case State::UNLOCKING:
-            return UINT16_C(0)
-                | 1 << pin::INPUT_HATCH_LOCK_DIRECTION
-                | 1 << pin::INPUT_HATCH_LOCK_ENABLE
-                | 1 << pin::BLINK;
-    }
-}
-
-void toggle_components(state::State state, bool voltage) {
-    uint_fast8_t pin = 0;
-    uint_fast64_t components = affected_components(state);
-
-    // Consider only d0 to d13 pins
-    while (components != 0 && pin <= 13) {
-        if (0 != (components & 1)) {
-            digitalWrite(pin, voltage);
-        }
-        pin++;
-        components >>= 1;
-    }
-}
-
-unsigned long __blink_last_ms;
-unsigned long __blink_voltage;
-
-unsigned long __state_last_ms;
-bool __locking;
-bool __stopping;
+// The current state.
 State __state;
 
-void setup() {
-    pinMode(pin::STOP, INPUT_PULLUP);
-    pinMode(pin::START, INPUT_PULLUP);
-    pinMode(pin::INPUT_HATCH_CLOSED, INPUT_PULLUP);
-    pinMode(pin::BLENDER, OUTPUT);
-    pinMode(pin::HEATER, OUTPUT);
-    pinMode(pin::MIXER, OUTPUT);
-    pinMode(pin::SEPARATOR_HATCH_ENABLE, OUTPUT);
-    pinMode(pin::SEPARATOR_HATCH_DIRECTION, OUTPUT);
-    pinMode(pin::INPUT_HATCH_LOCK_DIRECTION, OUTPUT);
-    pinMode(pin::INPUT_HATCH_LOCK_ENABLE, OUTPUT);
-    pinMode(pin::WATER_PUMP, OUTPUT);
-    pinMode(pin::LOWER_DRAIN_PUMP, OUTPUT);
-    pinMode(pin::UPPER_DRAIN_PUMP, OUTPUT);
-    pinMode(pin::BLINK, OUTPUT);
+// The last time a state change occurred.
+unsigned long __last_ms;
 
-    __blink_last_ms = millis();
-    digitalWrite(pin::BLINK, __blink_voltage = HIGH);
+// The accumulated time of the current state.
+unsigned long __delta_ms;
 
-    __state_last_ms = millis();
-    __locking = false;
-    __stopping = false;
-    __state = State::INITIAL_DRAINING;
+// Cancelling property will persist in succeeding states until a restart.
+bool __cancelling;
 
-    toggle_components(__state, HIGH);
+/**
+ * Digitally write the same value for a set of pins for a state (see
+ * {@link state::pins}).
+ *
+ * @param state the state
+ * @param value the value to set
+ * @see state::pins
+ */
+void __batch_digital_write(state::State state, uint8_t value) {
+    uint8_t pin = 0;
+    uint16_t pins = state::pins(state);
+
+    // Consider only d0 to d13 pins
+    while (pins != 0 && pin <= 13) {
+        if ((pins & 1) != 0) {
+            digitalWrite(pin, value);
+        }
+        pin++;
+        pins >>= 1;
+    }
 }
 
-bool update(unsigned long delta_ms) {
-    const bool starting = !digitalRead(pin::START);
-    const bool closed = !digitalRead(pin::INPUT_HATCH_CLOSED);
-    const bool locking = __locking = (__locking || starting) && closed;
-    const bool stopping = __stopping = __stopping || !digitalRead(pin::STOP);
+void setup() {
+    pinMode(pin::START, INPUT_PULLUP);
+    pinMode(pin::CANCEL_OR_CONTINUE, INPUT_PULLUP);
 
-    const State curr_state = __state;
-    const State next_state = state::override_for(curr_state, delta_ms, locking, stopping);
+    pinMode(pin::SEPARATOR_CLOSED, OUTPUT);
+    pinMode(pin::LOWER_WATER_PUMP, OUTPUT);
+    pinMode(pin::UPPER_WATER_PUMP, OUTPUT);
+    pinMode(pin::LOWER_DRAIN_CLOSED, OUTPUT);
+    pinMode(pin::UPPER_DRAIN_CLOSED, OUTPUT);
+    pinMode(pin::HEATER, OUTPUT);
+    pinMode(pin::MIXER, OUTPUT);
+    pinMode(pin::BLENDER, OUTPUT);
+    pinMode(pin::BLINK_1, OUTPUT);
+    pinMode(pin::BLINK_2, OUTPUT);
 
-    if (curr_state != next_state) {
-        toggle_components(curr_state, LOW);
-        __state = next_state;
-        __stopping = stopping && !state::is_idling(curr_state);
+    __state = State::READY;
+    __last_ms = millis();
+    __delta_ms = 0uL;
+    __cancelling = false;
 
-        toggle_components(next_state, HIGH);
-        __locking = locking && !state::is_idling(curr_state);
-
-        return true;
-    } else {
-        return false;
-    }
+    __batch_digital_write(__state, true);
 }
 
 void loop() {
     const unsigned long curr_ms = millis();
+    const unsigned long last_ms = __last_ms;
+    __last_ms = curr_ms;
 
-    if (update((unsigned long) (curr_ms - __state_last_ms))) {
-        __state_last_ms = curr_ms;
+    const unsigned long delta_ms = __delta_ms += curr_ms - last_ms;
 
-        // Resync blinks
-        digitalWrite(pin::BLINK, __blink_voltage = HIGH);
-        __blink_last_ms = curr_ms;
-    } else if (!state::is_idling(__state) && (unsigned long) (curr_ms - __blink_last_ms) >= 500) {
-        digitalWrite(pin::BLINK, __blink_voltage ^= HIGH);
-        __blink_last_ms = curr_ms;
+    const bool start = !digitalRead(pin::START);
+    const bool cancel_or_continue = !digitalRead(pin::CANCEL_OR_CONTINUE);
+
+    State state = __state;
+    switch (__state) {
+        case State::READY:
+            if (start) {
+                state = State::PRE_MIXING_CHECKING;
+                __cancelling = false;
+            }
+            break;
+        case State::PRE_MIXING_CHECKING:
+            if (cancel_or_continue) {
+                state = State::PRE_MIXING_GUARD;
+            } else {
+                digitalWrite(pin::BLINK_2, delta_ms / (duration::BLINKING / 2) % 2);
+                __delta_ms -= delta_ms >= duration::BLINKING * duration::BLINKING;
+            }
+            break;
+        case State::PRE_MIXING_GUARD:
+            if (!cancel_or_continue) {
+                state = State::MIXING_WATER_PUMPING;
+            }
+            break;
+        case State::MIXING_WATER_PUMPING:
+            if (__cancelling = __cancelling || cancel_or_continue) {
+                state = State::PRE_RINSING_CHECKING;
+            } else if (delta_ms >= duration::WATER_PUMPING) {
+                state = State::HEATED_MIXING;
+            }
+            break;
+        case State::HEATED_MIXING:
+            if (__cancelling = __cancelling || cancel_or_continue) {
+                state = State::PRE_RINSING_CHECKING;
+            } else if (delta_ms >= duration::HEATED_MIXING) {
+                state = State::MIXING;
+            }
+            break;
+        case State::MIXING:
+            if ((__cancelling = __cancelling || cancel_or_continue)
+                || delta_ms >= duration::MIXING
+            ) {
+                state = State::PRE_RINSING_CHECKING;
+            }
+            break;
+        case State::PRE_RINSING_CHECKING:
+            if (cancel_or_continue) {
+                state = State::PRE_RINSING_GUARD;
+            } else {
+                digitalWrite(pin::BLINK_2, delta_ms / (duration::BLINKING / 2) % 2);
+                __delta_ms -= delta_ms >= duration::BLINKING * duration::BLINKING;
+            }
+            break;
+        case State::PRE_RINSING_GUARD:
+            if (!cancel_or_continue) {
+                state = State::MIXING_WATER_DRAINING;
+            }
+            break;
+        case State::MIXING_WATER_DRAINING:
+            if (delta_ms >= duration::WATER_DRAINING) {
+                if (__cancelling = __cancelling || cancel_or_continue) {
+                    state = State::READY;
+                } else {
+                    state = State::RINSING;
+                }
+            }
+            break;
+        case State::RINSING:
+            if ((__cancelling = __cancelling || cancel_or_continue)
+                || delta_ms >= duration::RINSING) {
+                state = State::RINSE_WATER_DRAINING;
+            }
+            break;
+        case State::RINSE_WATER_DRAINING:
+            if (delta_ms >= duration::WATER_DRAINING) {
+                if (__cancelling = __cancelling || cancel_or_continue) {
+                    state = State::READY;
+                } else {
+                    state = State::POST_RINSING_CHECKING;
+                }
+            }
+            break;
+        case State::POST_RINSING_CHECKING:
+            if (cancel_or_continue) {
+                state = State::POST_RINSING_GUARD;
+            } else {
+                digitalWrite(pin::BLINK_2, delta_ms / (duration::BLINKING / 2) % 2);
+                __delta_ms -= delta_ms >= duration::BLINKING * duration::BLINKING;
+            }
+            break;
+        case State::POST_RINSING_GUARD:
+            if (!cancel_or_continue) {
+                state = State::RINSE_BLEND_PAUSE;
+            }
+            break;
+        case State::RINSE_BLEND_PAUSE:
+            if (delta_ms >= duration::RINSE_BLEND_PAUSE) {
+                state = State::PRE_BLENDING_CHECKING;
+            }
+            break;
+        case State::PRE_BLENDING_CHECKING:
+            if (cancel_or_continue) {
+                state = State::PRE_BLENDING_GUARD;
+            } else {
+                digitalWrite(pin::BLINK_2, delta_ms / (duration::BLINKING / 2) % 2);
+                __delta_ms -= delta_ms >= duration::BLINKING * duration::BLINKING;
+            }
+            break;
+        case State::PRE_BLENDING_GUARD:
+            if (!cancel_or_continue) {
+                state = State::BLENDING_WATER_PUMPING;
+            }
+            break;
+        case State::BLENDING_WATER_PUMPING:
+            if (delta_ms >= duration::WATER_PUMPING) {
+                state = State::BLENDING;
+            }
+            break;
+        case State::BLENDING:
+            if (delta_ms >= duration::RINSING) {
+                state = State::POST_BLENDING_CHECKING;
+            }
+            break;
+        case State::POST_BLENDING_CHECKING:
+            if (cancel_or_continue) {
+                state = State::BLENDING_WATER_DRAINING;
+            } else {
+                digitalWrite(pin::BLINK_2, delta_ms / (duration::BLINKING / 2) % 2);
+                __delta_ms -= delta_ms >= duration::BLINKING * duration::BLINKING;
+            }
+            break;
+        case State::BLENDING_WATER_DRAINING:
+            if (delta_ms >= duration::WATER_DRAINING) {
+                state = State::READY;
+            }
+            break;
+    }
+
+    if (state != __state) {
+        __batch_digital_write(__state, false);
+        digitalWrite(pin::BLINK_2, __cancelling && state != State::READY);
+        __batch_digital_write(state, true);
+
+        __state = state;
+        __delta_ms = 0uL;
+
     }
 }
